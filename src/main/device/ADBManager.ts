@@ -4,12 +4,36 @@
  * 负责设备检测、主题推送、应用主题、截屏和无线 ADB 连接
  */
 
-import * as adbkit from 'adbkit'
-import * as path from 'path'
-import * as os from 'os'
-import * as fs from 'fs'
+// 修复：使用 CommonJS 风格的 require 导入 adbkit，因为该库没有类型定义且使用 module.exports
+import adbkit from 'adbkit'
+// 修复：使用命名导入方式导入 Node.js 内置模块
+import path from 'path'
+import os from 'os'
+import fs from 'fs'
 
 // ==================== 类型定义 ====================
+
+/** adbkit 设备对象类型 */
+interface AdbkitDevice {
+  id: string
+  type: string
+}
+
+/** adbkit 客户端类型 */
+interface AdbkitClient {
+  listDevices(): Promise<AdbkitDevice[]>
+  getDevice(serial: string): AdbkitDeviceClient
+  connect(host: string, port?: number): Promise<any>
+  disconnect(host: string): Promise<any>
+}
+
+/** adbkit 设备客户端类型 */
+interface AdbkitDeviceClient {
+  getProperties(): Promise<Record<string, any>>
+  shell(command: string | string[]): Promise<Buffer>
+  push(source: string, dest: string): Promise<any>
+  screencap(): Promise<NodeJS.ReadableStream>
+}
 
 /** 设备信息 */
 export interface DeviceInfo {
@@ -40,7 +64,7 @@ export type DeviceMonitorCallback = (devices: DeviceInfo[]) => void
  */
 class ADBManager {
   /** adbkit 客户端实例 */
-  private client: adbkit.AdbClient | null = null
+  private client: AdbkitClient | null = null
 
   /** 单例实例 */
   private static instance: ADBManager | null = null
@@ -80,10 +104,12 @@ class ADBManager {
    */
   private initClient(): void {
     try {
-      this.client = adbkit.createClient({
+      // 使用类型断言，因为 adbkit 没有 TypeScript 类型定义
+      const client = (adbkit as any).createClient({
         host: '127.0.0.1',
         port: 5037,
       })
+      this.client = client as AdbkitClient
       console.log('[ADBManager] adbkit 客户端初始化成功')
     } catch (error) {
       console.error('[ADBManager] adbkit 客户端初始化失败:', error)
@@ -94,7 +120,7 @@ class ADBManager {
   /**
    * 确保客户端可用
    */
-  private ensureClient(): adbkit.AdbClient {
+  private ensureClient(): AdbkitClient {
     if (!this.client) {
       this.initClient()
     }
@@ -157,7 +183,7 @@ class ADBManager {
    * @param device adbkit 设备对象
    * @returns 标准化的设备信息
    */
-  private async parseDeviceInfo(device: adbkit.Device): Promise<DeviceInfo> {
+  private async parseDeviceInfo(device: AdbkitDevice): Promise<DeviceInfo> {
     const client = this.ensureClient()
     const deviceClient = client.getDevice(device.id)
 

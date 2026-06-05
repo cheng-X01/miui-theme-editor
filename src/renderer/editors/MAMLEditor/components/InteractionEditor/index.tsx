@@ -252,7 +252,7 @@ const ConditionEditor: React.FC<{
                         {snippet.description}
                       </span>
                     </div>
-                    <Tag size="small" style={{ fontSize: 10 }}>
+                    <Tag style={{ fontSize: 10 }}>
                       {snippet.label}
                     </Tag>
                   </div>
@@ -590,7 +590,7 @@ const InteractionEditor: React.FC<InteractionEditorProps> = ({ triggers, element
               </span>
             }
           >
-            <ConditionEditor />
+            <ConditionEditor value={form.getFieldValue('condition')} onChange={(value) => form.setFieldValue('condition', value)} />
           </Form.Item>
 
           {/* 参数配置（根据操作类型显示不同参数） */}

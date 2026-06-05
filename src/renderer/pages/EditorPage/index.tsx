@@ -262,7 +262,7 @@ const EditorPage: React.FC<EditorPageProps> = ({ project, onBack }) => {
       case 'colors':
         return renderColors();
       case 'fonts':
-        return <FontEditor project={project} />;
+        return <FontEditor fonts={project.resources.fonts} onFontReplace={() => {}} onFontImport={() => {}} onFontDelete={() => {}} />;
       case 'sounds':
         return renderSounds();
       case 'maml':
@@ -350,7 +350,7 @@ const EditorPage: React.FC<EditorPageProps> = ({ project, onBack }) => {
         </Text>
         <AIGenerateButtons module="icon" onGenerate={handleAIGenerate} />
       </div>
-      <IconEditor project={project} />
+      <IconEditor icons={project.resources.icons} onIconReplace={() => {}} onIconImport={() => {}} onIconDelete={() => {}} />
     </div>
   );
 
@@ -373,7 +373,7 @@ const EditorPage: React.FC<EditorPageProps> = ({ project, onBack }) => {
         </Text>
         <AIGenerateButtons module="wallpaper" onGenerate={handleAIGenerate} />
       </div>
-      <WallpaperEditor project={project} />
+      <WallpaperEditor wallpapers={project.resources.wallpapers} onWallpaperReplace={() => {}} onWallpaperRemove={() => {}} />
     </div>
   );
 
@@ -396,7 +396,7 @@ const EditorPage: React.FC<EditorPageProps> = ({ project, onBack }) => {
         </Text>
         <AIGenerateButtons module="color" onGenerate={handleAIGenerate} />
       </div>
-      <ColorEditor project={project} />
+      <ColorEditor colors={[]} onColorChange={() => {}} onColorBatchChange={() => {}} />
     </div>
   );
 

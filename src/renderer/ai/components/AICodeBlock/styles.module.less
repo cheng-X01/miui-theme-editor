@@ -1,177 +1,20 @@
-/**
- * MIUI Theme Editor - AI 代码块样式
- * 暗色主题风格，语法高亮配色
- */
-
-// ==================== 颜色变量 ====================
-
-@code-bg: #0f0f23;
-@code-header-bg: #1a1a3e;
-@border-color: #2a2a4a;
-@text-primary: #e0e0e0;
-@text-secondary: #a0a0b0;
-@text-muted: #606080;
-@line-number-color: #4a4a6a;
-
-// 语法高亮颜色
-@token-keyword: #569cd6;
-@token-string: #ce9178;
-@token-comment: #6a9955;
-@token-tag: #4ec9b0;
-@token-attr: #9cdcfe;
-@token-number: #b5cea8;
-@token-operator: #d4d4d4;
-@token-function: #dcdcaa;
-@token-plain: #d4d4d4;
-
-// ==================== 代码块容器 ====================
-
-.codeBlock {
-  margin: 12px 0;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid @border-color;
-  background: @code-bg;
-  font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
-}
-
-// ==================== 顶部标题栏 ====================
-
-.codeHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: @code-header-bg;
-  border-bottom: 1px solid @border-color;
-}
-
-.headerBtn {
-  color: @text-secondary !important;
-  padding: 2px 6px !important;
-  height: 24px !important;
-
-  &:hover {
-    color: @text-primary !important;
-    background: rgba(255, 255, 255, 0.08) !important;
-  }
-}
-
-.languageTag {
-  font-size: 11px;
-  font-weight: 600;
-  color: @token-keyword;
-  background: rgba(86, 156, 214, 0.15);
-  padding: 2px 8px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.filename {
-  font-size: 11px;
-  color: @text-secondary;
-  font-family: 'Fira Code', monospace;
-}
-
-// ==================== 代码内容区域 ====================
-
-.codeBody {
-  overflow-x: auto;
-
-  // 自定义滚动条
-  &::-webkit-scrollbar {
-    height: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: @border-color;
-    border-radius: 3px;
-  }
-}
-
-.codePre {
-  margin: 0;
-  padding: 12px 0;
-  background: transparent;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.codeContent {
-  display: block;
-  font-family: inherit;
-}
-
-// ==================== 代码行 ====================
-
-.codeLine {
-  display: flex;
-  min-height: 20px;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.02);
-  }
-}
-
-.lineNumber {
-  display: inline-block;
-  width: 40px;
-  min-width: 40px;
-  text-align: right;
-  padding-right: 12px;
-  color: @line-number-color;
-  font-size: 11px;
-  line-height: 1.6;
-  user-select: none;
-  flex-shrink: 0;
-}
-
-.lineContent {
-  flex: 1;
-  white-space: pre;
-  padding-right: 16px;
-}
-
-// ==================== 语法高亮 Token ====================
-
-.tokenKeyword {
-  color: @token-keyword;
-}
-
-.tokenString {
-  color: @token-string;
-}
-
-.tokenComment {
-  color: @token-comment;
-  font-style: italic;
-}
-
-.tokenTag {
-  color: @token-tag;
-}
-
-.tokenAttr {
-  color: @token-attr;
-}
-
-.tokenNumber {
-  color: @token-number;
-}
-
-.tokenOperator {
-  color: @token-operator;
-}
-
-.tokenFunction {
-  color: @token-function;
-}
-
-.tokenPlain {
-  color: @token-plain;
-}
+.codeBlock {}
+.codeHeader {}
+.headerBtn {}
+.languageTag {}
+.filename {}
+.codeBody {}
+.codePre {}
+.codeContent {}
+.codeLine {}
+.lineNumber {}
+.lineContent {}
+.tokenKeyword {}
+.tokenString {}
+.tokenComment {}
+.tokenTag {}
+.tokenAttr {}
+.tokenNumber {}
+.tokenOperator {}
+.tokenFunction {}
+.tokenPlain {}

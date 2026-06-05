@@ -187,7 +187,7 @@ export class OpenAIProvider extends AIProvider {
     const duration = Date.now() - startTime;
 
     return {
-      urls: response.data.map((item) => item.url || ''),
+      urls: response.data?.map((item) => item.url || '') || [],
       model: 'dall-e-3',
       duration,
     };

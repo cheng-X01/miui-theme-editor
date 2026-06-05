@@ -52,6 +52,7 @@ const DARK_THEME = {
   activeItem: '#177ddc',
   hoverItem: '#2c2c2c',
   successColor: '#52c41a',
+  errorColor: '#ff4d4f',
 };
 
 // ==================== 类型定义 ====================

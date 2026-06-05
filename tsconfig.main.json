@@ -6,22 +6,23 @@
     "module": "CommonJS",
     "moduleResolution": "node",
     "outDir": "dist/main",
-    "rootDir": "src/main",
     "strict": true,
+    // 修复：启用 ES 模块互操作，允许默认导入 CommonJS 模块
     "esModuleInterop": true,
+    // 修复：允许合成默认导入，解决 JSZip 等库的类型导入问题
+    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-
-    /* 路径别名 */
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["src/shared/*"]
     }
   },
-  "include": ["src/main", "src/shared"],
+  // 修复：将 src/types 目录包含进来，以识别 adbkit 等第三方库的类型声明
+  "include": ["src/main", "src/shared", "src/types"],
   "exclude": ["node_modules", "dist"]
 }

@@ -4,8 +4,8 @@
  * 生成 description.xml、theme_config.json 并添加各类资源
  */
 
-import * as JSZip from 'jszip';
-import * as path from 'path';
+// 修复：使用默认导入方式导入 JSZip，避免 ESM/CJS 混用问题
+import JSZip from 'jszip';
 import type {
   ThemeProject,
   ThemeDescription,
@@ -79,19 +79,19 @@ export class MTZPacker {
     files.push('theme_config.json');
 
     // 3. 添加图标资源
-    this.addIcons(zip, project.resources.icons, compress, compressionLevel, files);
+    await this.addIcons(zip, project.resources.icons, compress, compressionLevel, files);
 
     // 4. 添加壁纸资源
-    this.addWallpapers(zip, project.resources.wallpapers, compress, compressionLevel, files);
+    await this.addWallpapers(zip, project.resources.wallpapers, compress, compressionLevel, files);
 
     // 5. 添加字体资源
-    this.addFonts(zip, project.resources.fonts, compress, compressionLevel, files);
+    await this.addFonts(zip, project.resources.fonts, compress, compressionLevel, files);
 
     // 6. 添加声音资源
-    this.addSounds(zip, project.resources.sounds, compress, compressionLevel, files);
+    await this.addSounds(zip, project.resources.sounds, compress, compressionLevel, files);
 
     // 7. 添加锁屏资源
-    this.addLockscreens(zip, project.resources.lockscreens, compress, compressionLevel, files);
+    await this.addLockscreens(zip, project.resources.lockscreens, compress, compressionLevel, files);
 
     // 8. 添加状态栏配置
     this.addStatusbar(zip, project.resources.statusbar, compress, compressionLevel, files);
@@ -164,13 +164,13 @@ export class MTZPacker {
   /**
    * 添加图标资源到 ZIP 包
    */
-  private addIcons(
+  private async addIcons(
     zip: JSZip,
     icons: IconResource[],
     compress: boolean,
     compressionLevel: number,
     files: string[]
-  ): void {
+  ): Promise<void> {
     for (const icon of icons) {
       if (icon.previewData) {
         // 如果有预览数据（Base64），转换为 Buffer 添加
@@ -191,13 +191,13 @@ export class MTZPacker {
   /**
    * 添加壁纸资源到 ZIP 包
    */
-  private addWallpapers(
+  private async addWallpapers(
     zip: JSZip,
     wallpapers: WallpaperResource[],
     compress: boolean,
     compressionLevel: number,
     files: string[]
-  ): void {
+  ): Promise<void> {
     for (const wallpaper of wallpapers) {
       if (wallpaper.previewData) {
         const buffer = Buffer.from(wallpaper.previewData, 'base64');
@@ -213,13 +213,13 @@ export class MTZPacker {
   /**
    * 添加字体资源到 ZIP 包
    */
-  private addFonts(
+  private async addFonts(
     zip: JSZip,
     fonts: FontResource[],
     compress: boolean,
     compressionLevel: number,
     files: string[]
-  ): void {
+  ): Promise<void> {
     for (const font of fonts) {
       // 字体文件通常较大，使用 STORE 不压缩以加快加载速度
       files.push(font.filePath);
@@ -230,13 +230,13 @@ export class MTZPacker {
   /**
    * 添加声音资源到 ZIP 包
    */
-  private addSounds(
+  private async addSounds(
     zip: JSZip,
     sounds: SoundResource[],
     compress: boolean,
     compressionLevel: number,
     files: string[]
-  ): void {
+  ): Promise<void> {
     for (const sound of sounds) {
       files.push(sound.filePath);
       // 实际使用时需要从原始文件读取声音数据
@@ -246,13 +246,13 @@ export class MTZPacker {
   /**
    * 添加锁屏资源到 ZIP 包
    */
-  private addLockscreens(
+  private async addLockscreens(
     zip: JSZip,
     lockscreens: LockscreenResource[],
     compress: boolean,
     compressionLevel: number,
     files: string[]
-  ): void {
+  ): Promise<void> {
     for (const lockscreen of lockscreens) {
       files.push(lockscreen.filePath);
       // 实际使用时需要从原始文件读取锁屏数据

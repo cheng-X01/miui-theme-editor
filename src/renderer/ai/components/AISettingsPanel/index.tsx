@@ -466,12 +466,12 @@ export const AISettingsPanel: React.FC = () => {
                   allowClear
                   dropdownStyle={{ background: DARK_THEME.cardBackground }}
                   options={
-                    RECOMMENDED_MODELS[form.getFieldValue('provider') || 'openai']?.map(
-                      (model) => ({
+                    ((RECOMMENDED_MODELS as Record<string, string[]>)[form.getFieldValue('provider') || 'openai'] || []).map(
+                      (model: string) => ({
                         label: model,
                         value: model,
                       })
-                    ) || []
+                    )
                   }
                   dropdownRender={(menu) => (
                     <div>

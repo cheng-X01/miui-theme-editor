@@ -8,11 +8,12 @@
 import { AIProvider } from './AIProvider';
 import { AIConfigManager } from './AIConfigManager';
 import type {
-  AIProviderConfig,
+  AIProviderConfig as AIBaseProviderConfig,
   AIGenerateRequest,
   AIGenerateResponse,
   AIStreamChunk,
 } from './AIProvider';
+import type { AIProviderConfig } from './AIConfigManager';
 
 // ==================== 类型定义 ====================
 
@@ -123,7 +124,7 @@ export class AIOrchestrator {
         const existingConfig = existing.getConfig();
         if (
           existingConfig.model === decrypted.model &&
-          existingConfig.baseUrl === decrypted.endpoint &&
+          existingConfig.baseUrl === (decrypted.endpoint || '') &&
           existingConfig.apiKey === decrypted.apiKey
         ) {
           continue;
@@ -156,9 +157,9 @@ export class AIOrchestrator {
    * @returns AIProvider 实例或 null
    */
   private createProvider(config: AIProviderConfig): AIProvider | null {
-    const baseConfig = {
-      name: config.id,
-      type: config.provider === 'custom' ? 'custom' : config.provider,
+    const baseConfig: AIBaseProviderConfig = {
+      name: config.name || config.id,
+      type: (config.provider === 'custom' ? 'custom' : config.provider) as AIBaseProviderConfig['type'],
       baseUrl: config.endpoint || '',
       apiKey: config.apiKey,
       model: config.model,

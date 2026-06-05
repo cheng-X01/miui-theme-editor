@@ -4,8 +4,10 @@
  * 提取 description.xml、theme_config.json 和各类资源文件
  */
 
-import * as JSZip from 'jszip';
-import * as path from 'path';
+// 修复：使用默认导入方式导入 JSZip，避免 ESM/CJS 混用问题
+import JSZip from 'jszip';
+// 修复：使用命名导入方式导入 path 模块
+import path from 'path';
 import { XMLParser } from 'fast-xml-parser';
 import { v4 as uuidv4 } from 'uuid';
 import type {
@@ -19,7 +21,7 @@ import type {
   LockscreenResource,
   StatusbarResource,
   MAMLModule,
-} from '../shared/types';
+} from '../../shared/types';
 
 // ==================== 类型定义 ====================
 
@@ -85,7 +87,7 @@ export class MTZParser {
     this.validateStructure(zip, warnings);
 
     // 3. 解析 description.xml
-    const description = this.parseDescriptionXml(zip, warnings);
+    const description = await this.parseDescriptionXml(zip, warnings);
 
     // 4. 解析 theme_config.json（如果存在）
     const themeConfig = await this.parseThemeConfig(zip, warnings);
@@ -135,10 +137,10 @@ export class MTZParser {
    * 解析 description.xml
    * MIUI 主题的核心描述文件
    */
-  private parseDescriptionXml(
+  private async parseDescriptionXml(
     zip: JSZip,
     warnings: string[]
-  ): ThemeDescription {
+  ): Promise<ThemeDescription> {
     // 默认描述值
     const defaultDescription: ThemeDescription = {
       name: '未命名主题',
@@ -163,27 +165,26 @@ export class MTZParser {
 
     try {
       const xmlContent = zip.files[descFile];
-      const xmlString = xmlContent ? xmlContent.async('text') : Promise.resolve('');
-      return xmlString.then((text) => {
-        if (!text) return defaultDescription;
+      const text = xmlContent ? await xmlContent.async('text') : '';
+      
+      if (!text) return defaultDescription;
 
-        const parsed = this.xmlParser.parse(text);
-        const theme = parsed.theme || parsed.MIUI_Theme || parsed;
+      const parsed = this.xmlParser.parse(text);
+      const theme = parsed.theme || parsed.MIUI_Theme || parsed;
 
-        return {
-          name: theme.name || theme.title || defaultDescription.name,
-          author: theme.author || theme.designer || defaultDescription.author,
-          version: theme.version || theme.ver || defaultDescription.version,
-          description: theme.description || theme.desc || defaultDescription.description,
-          uiVersion: theme.uiVersion || theme.ui_version || defaultDescription.uiVersion,
-          designWidth: parseInt(theme.designWidth || theme.design_width || String(defaultDescription.designWidth)),
-          designHeight: parseInt(theme.designHeight || theme.design_height || String(defaultDescription.designHeight)),
-          supportsDarkMode: theme.supportsDarkMode === 'true' || theme.darkMode === 'true',
-          minMIUIVersion: theme.minMIUIVersion || theme.min_version || defaultDescription.minMIUIVersion,
-          category: theme.category,
-          tags: theme.tags ? (Array.isArray(theme.tags) ? theme.tags : [theme.tags]) : [],
-        };
-      });
+      return {
+        name: theme.name || theme.title || defaultDescription.name,
+        author: theme.author || theme.designer || defaultDescription.author,
+        version: theme.version || theme.ver || defaultDescription.version,
+        description: theme.description || theme.desc || defaultDescription.description,
+        uiVersion: theme.uiVersion || theme.ui_version || defaultDescription.uiVersion,
+        designWidth: parseInt(theme.designWidth || theme.design_width || String(defaultDescription.designWidth)),
+        designHeight: parseInt(theme.designHeight || theme.design_height || String(defaultDescription.designHeight)),
+        supportsDarkMode: theme.supportsDarkMode === 'true' || theme.darkMode === 'true',
+        minMIUIVersion: theme.minMIUIVersion || theme.min_version || defaultDescription.minMIUIVersion,
+        category: theme.category,
+        tags: theme.tags ? (Array.isArray(theme.tags) ? theme.tags : [theme.tags]) : [],
+      };
     } catch (error: any) {
       warnings.push(`解析 description.xml 失败: ${error.message}`);
       return defaultDescription;
@@ -239,7 +240,7 @@ export class MTZParser {
     const lockscreens = await this.parseLockscreens(zip, fileNames, warnings);
 
     // 解析状态栏配置
-    const statusbar = this.parseStatusbar(zip, fileNames, warnings);
+    const statusbar = await this.parseStatusbar(zip, fileNames, warnings);
 
     return {
       icons,
@@ -357,7 +358,6 @@ export class MTZParser {
     for (const filePath of fontFiles) {
       try {
         const name = path.basename(filePath, path.extname(filePath));
-        const ext = path.extname(filePath).toLowerCase();
 
         // 根据文件名推断字体类型
         let type: FontResource['type'] = 'regular';
@@ -472,11 +472,11 @@ export class MTZParser {
    * 解析状态栏配置
    * 状态栏配置通常在 description.xml 或单独的配置文件中
    */
-  private parseStatusbar(
+  private async parseStatusbar(
     zip: JSZip,
     fileNames: string[],
     warnings: string[]
-  ): StatusbarResource {
+  ): Promise<StatusbarResource> {
     const statusbar: StatusbarResource = {
       showCarrier: true,
     };
@@ -496,17 +496,13 @@ export class MTZParser {
     if (statusbarConfigFile) {
       try {
         const entry = zip.files[statusbarConfigFile];
-        const content = entry ? entry.async('text') : Promise.resolve('');
-        content.then((text) => {
-          if (text) {
-            const config = JSON.parse(text);
-            Object.assign(statusbar, config);
-          }
-        }).catch(() => {
-          warnings.push(`解析状态栏配置 ${statusbarConfigFile} 失败`);
-        });
+        const text = entry ? await entry.async('text') : '';
+        if (text) {
+          const config = JSON.parse(text);
+          Object.assign(statusbar, config);
+        }
       } catch {
-        // 忽略解析错误
+        warnings.push(`解析状态栏配置 ${statusbarConfigFile} 失败`);
       }
     }
 
@@ -527,7 +523,7 @@ export class MTZParser {
       (name) =>
         name.endsWith('.manifest') ||
         name.endsWith('.maml') ||
-        name.endsWith('.xml') && (name.includes('lockscreen/') || name.includes('maml/'))
+        (name.endsWith('.xml') && (name.includes('lockscreen/') || name.includes('maml/')))
     );
 
     for (const filePath of mamlFiles) {

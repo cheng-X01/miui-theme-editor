@@ -35,7 +35,7 @@ import {
   CheckOutlined,
   MinusOutlined,
   AppstoreOutlined,
-  PaletteOutlined,
+  BgColorsOutlined,
   FolderOutlined,
   FolderOpenOutlined,
   CopyOutlined,
@@ -79,7 +79,7 @@ interface ColorGroup {
 /** 树节点数据 */
 interface TreeNode {
   /** 节点标题 */
-  title: string;
+  title: React.ReactNode;
   /** 节点键值 */
   key: string;
   /** 子节点 */
@@ -197,7 +197,7 @@ const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
       placement="left"
       title={
         <Space>
-          <PaletteOutlined />
+          <BgColorsOutlined />
           <span>{colorName}</span>
         </Space>
       }
@@ -831,12 +831,6 @@ const ColorEditor: React.FC<ColorEditorProps> = ({
               background: 'transparent',
               color: '#e0e0e0',
               fontSize: '13px',
-            }}
-            // 暗色主题树样式覆盖
-            styles={{
-              nodeSelected: {
-                background: 'rgba(255,107,107,0.15) !important',
-              },
             }}
           />
         </div>

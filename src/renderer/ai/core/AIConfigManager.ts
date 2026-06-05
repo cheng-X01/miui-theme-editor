@@ -321,7 +321,7 @@ export class AIConfigManager {
     try {
       switch (config.provider) {
         case 'openai': {
-          const { OpenAIProvider } = await import('../../providers/OpenAIProvider');
+          const { OpenAIProvider } = await import('../providers/OpenAIProvider');
           const openai = new OpenAIProvider({
             name: config.name,
             type: 'openai',

@@ -11,7 +11,7 @@ import {
   RobotOutlined,
 } from '@ant-design/icons';
 import { v4 as uuidv4 } from 'uuid';
-import type { ThemeProject } from '../../shared/types';
+import type { ThemeProject } from '../../../shared/types';
 
 const { Title, Text } = Typography;
 

@@ -759,7 +759,7 @@ const MAMLEditor: React.FC<MAMLEditorProps> = ({ manifest, onChange }) => {
               onElementMove={handleElementMove}
               onElementResize={handleElementResize}
               onElementDrop={handleElementDrop}
-              onCanvasStateChange={setCanvasState}
+              onCanvasStateChange={(state) => setCanvasState((prev) => ({ ...prev, ...state }))}
               onContextMenu={handleContextMenu}
               onDeleteElement={handleDeleteElement}
             />

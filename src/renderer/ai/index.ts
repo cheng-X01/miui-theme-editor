@@ -25,7 +25,7 @@
 // ==================== 核心类 ====================
 
 /** AI 提供者抽象基类及类型定义 */
-export { AIProvider, AICapability } from './core/AIProvider';
+export { AIProvider } from './core/AIProvider';
 
 /** AI 调度器：统一管理多个 AI 提供者和对话历史 */
 export { AIOrchestrator, getAIOrchestrator } from './core/AIOrchestrator';
