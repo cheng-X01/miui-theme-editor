@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
-import { Tabs, Button, Tooltip, Dropdown, Menu, message } from 'antd'
+import { Tabs, Button, Tooltip, message } from 'antd'
 import {
   UndoOutlined,
   RedoOutlined,
@@ -19,8 +19,6 @@ import {
   VerticalAlignBottomOutlined,
   GroupOutlined,
   UngroupOutlined,
-  LockOutlined,
-  UnlockOutlined,
   BorderOutlined,
   ZoomInOutlined,
   ZoomOutOutlined,
@@ -28,7 +26,9 @@ import {
   ApartmentOutlined,
   EyeOutlined,
   SaveOutlined,
-  DownloadOutlined,
+  ThunderboltOutlined,
+  InteractionOutlined,
+  SettingOutlined,
 } from '@ant-design/icons'
 import type { MAMLElementInstance, CanvasState, MAMLElementType } from './types'
 import { defaultEditorConfig, defaultTheme } from './types'
@@ -36,9 +36,13 @@ import { createElementInstance, generateId } from './elementLibrary'
 import ComponentLibrary from './components/ComponentLibrary'
 import Canvas from './components/Canvas'
 import PropertyPanel from './components/PropertyPanel'
+import AnimationEditor from './components/AnimationEditor'
+import InteractionEditor from './components/InteractionEditor'
 import LayerPanel from './components/LayerPanel'
 import CodeEditor from './components/CodeEditor'
 import PreviewPanel from './components/PreviewPanel'
+import type { AnimationConfig } from './components/AnimationEditor'
+import type { TriggerConfig } from './components/InteractionEditor'
 
 interface MAMLEditorProps {
   manifest?: string
@@ -155,6 +159,11 @@ const MAMLEditor: React.FC<MAMLEditorProps> = ({ manifest, onChange }) => {
     future: [],
   })
   const [activeBottomTab, setActiveBottomTab] = useState('layers')
+  const [activeRightTab, setActiveRightTab] = useState('properties')
+
+  // 动画和触发器状态（存储在元素实例中）
+  const [animations, setAnimations] = useState<AnimationConfig[]>([])
+  const [triggers, setTriggers] = useState<TriggerConfig[]>([])
 
   // 初始化
   useEffect(() => {
@@ -567,6 +576,51 @@ const MAMLEditor: React.FC<MAMLEditorProps> = ({ manifest, onChange }) => {
     return findElement(elements)
   }, [elements, selectedIds])
 
+  // 获取所有元素列表（用于交互编辑器选择目标）
+  const allElements = useMemo(() => {
+    const result: { id: string; name: string }[] = []
+    const collect = (els: MAMLElementInstance[]) => {
+      for (const el of els) {
+        result.push({ id: el.id, name: el.name })
+        if (el.children) {
+          collect(el.children)
+        }
+      }
+    }
+    collect(elements)
+    return result
+  }, [elements])
+
+  // 处理动画变更
+  const handleAnimationsChange = useCallback((newAnimations: AnimationConfig[]) => {
+    setAnimations(newAnimations)
+    // 将动画同步到选中元素的属性中
+    if (selectedElement) {
+      const animationXML = newAnimations
+        .map(
+          (anim) =>
+            `    <${anim.type} from="${anim.from}" to="${anim.to}" duration="${anim.duration}" delay="${anim.delay}" repeat="${anim.repeat}" ease="${anim.ease}" loop="${anim.loop}"${anim.property ? ` property="${anim.property}"` : ''}/>`
+        )
+        .join('\n')
+      handleUpdateAttribute(selectedElement.id, 'animations', animationXML)
+    }
+  }, [selectedElement])
+
+  // 处理触发器变更
+  const handleTriggersChange = useCallback((newTriggers: TriggerConfig[]) => {
+    setTriggers(newTriggers)
+    // 将触发器同步到选中元素的属性中
+    if (selectedElement) {
+      const triggerXML = newTriggers
+        .map(
+          (trigger) =>
+            `    <Trigger action="${trigger.action}" target="${trigger.target}" operation="${trigger.operation}"${trigger.condition ? ` condition="${trigger.condition}"` : ''}/>`
+        )
+        .join('\n')
+      handleUpdateAttribute(selectedElement.id, 'triggers', triggerXML)
+    }
+  }, [selectedElement])
+
   // 工具栏按钮
   const toolbarButtons = [
     { icon: <UndoOutlined />, tooltip: '撤销 (Ctrl+Z)', onClick: undo, disabled: history.past.length === 0 },
@@ -772,12 +826,94 @@ const MAMLEditor: React.FC<MAMLEditorProps> = ({ manifest, onChange }) => {
           </div>
         </div>
 
-        {/* 右侧属性面板 */}
-        <PropertyPanel
-          element={selectedElement}
-          onUpdate={handleUpdateElement}
-          onUpdateAttribute={handleUpdateAttribute}
-        />
+        {/* 右侧属性面板（带标签页） */}
+        <div style={{ width: 280, height: '100%', display: 'flex', flexDirection: 'column', background: '#0f0f23' }}>
+          <Tabs
+            activeKey={activeRightTab}
+            onChange={setActiveRightTab}
+            style={{ height: '100%' }}
+            tabBarStyle={{ margin: 0, padding: '0 8px', background: '#0a0a1a', borderBottom: '1px solid #2a2a3e' }}
+            items={[
+              {
+                key: 'properties',
+                label: (
+                  <span style={{ color: activeRightTab === 'properties' ? '#ff6b6b' : '#e0e0e0', fontSize: 12 }}>
+                    <SettingOutlined style={{ marginRight: 4 }} />
+                    属性
+                  </span>
+                ),
+                children: (
+                  <PropertyPanel
+                    element={selectedElement}
+                    onUpdate={handleUpdateElement}
+                    onUpdateAttribute={handleUpdateAttribute}
+                  />
+                ),
+              },
+              {
+                key: 'animation',
+                label: (
+                  <span style={{ color: activeRightTab === 'animation' ? '#ff6b6b' : '#e0e0e0', fontSize: 12 }}>
+                    <ThunderboltOutlined style={{ marginRight: 4 }} />
+                    动画
+                  </span>
+                ),
+                children: selectedElement ? (
+                  <AnimationEditor
+                    animations={animations}
+                    onChange={handleAnimationsChange}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 280,
+                      height: '100%',
+                      background: '#0f0f23',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#666',
+                      fontSize: 14,
+                    }}
+                  >
+                    选择一个元素以编辑动画
+                  </div>
+                ),
+              },
+              {
+                key: 'interaction',
+                label: (
+                  <span style={{ color: activeRightTab === 'interaction' ? '#ff6b6b' : '#e0e0e0', fontSize: 12 }}>
+                    <InteractionOutlined style={{ marginRight: 4 }} />
+                    交互
+                  </span>
+                ),
+                children: selectedElement ? (
+                  <InteractionEditor
+                    triggers={triggers}
+                    elements={allElements}
+                    onChange={handleTriggersChange}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 280,
+                      height: '100%',
+                      background: '#0f0f23',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#666',
+                      fontSize: 14,
+                    }}
+                  >
+                    选择一个元素以编辑交互
+                  </div>
+                ),
+              },
+            ]}
+          />
+        </div>
       </div>
     </div>
   )

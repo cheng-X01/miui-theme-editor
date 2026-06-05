@@ -1,6 +1,7 @@
 /**
  * 代码编辑器
  * XML 语法高亮，与可视化画布双向绑定
+ * 集成 MAML 代码补全功能
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
@@ -11,10 +12,12 @@ import {
   CheckOutlined,
   ReloadOutlined,
 } from '@ant-design/icons'
+import MAMLCodeCompletion from './MAMLCodeCompletion'
 
 interface CodeEditorProps {
   xml: string
   onChange: (xml: string) => void
+  elementType?: string // 当前编辑的元素类型，用于代码补全上下文
 }
 
 // 简单的 XML 格式化
@@ -56,9 +59,10 @@ const highlightXML = (xml: string): string => {
     .replace(/(&lt;!--.*?--&gt;)/g, '<span class="xml-comment">$1</span>')
 }
 
-const CodeEditor: React.FC<CodeEditorProps> = ({ xml, onChange }) => {
+const CodeEditor: React.FC<CodeEditorProps> = ({ xml, onChange, elementType }) => {
   const [code, setCode] = useState(xml)
   const [copied, setCopied] = useState(false)
+  const [cursorPosition, setCursorPosition] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const highlightRef = useRef<HTMLPreElement>(null)
 
@@ -79,8 +83,32 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ xml, onChange }) => {
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newCode = e.target.value
     setCode(newCode)
+    setCursorPosition(e.target.selectionStart)
     onChange(newCode)
   }
+
+  // 处理光标位置变化
+  const handleSelect = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const target = e.target as HTMLTextAreaElement
+    setCursorPosition(target.selectionStart)
+  }
+
+  // 接受代码补全建议
+  const handleAcceptCompletion = useCallback((completion: string) => {
+    if (!textareaRef.current) return
+    const textarea = textareaRef.current
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const newCode = code.substring(0, start) + completion + code.substring(end)
+    setCode(newCode)
+    setCursorPosition(start + completion.length)
+    onChange(newCode)
+    // 设置新的光标位置
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + completion.length, start + completion.length)
+    }, 0)
+  }, [code, onChange])
 
   // 格式化
   const handleFormat = () => {
@@ -190,8 +218,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ xml, onChange }) => {
           ref={textareaRef}
           value={code}
           onChange={handleChange}
+          onSelect={handleSelect}
           onScroll={handleScroll}
           spellCheck={false}
+          className="code-editor-textarea"
           style={{
             position: 'absolute',
             top: 0,
@@ -214,6 +244,14 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ xml, onChange }) => {
             wordWrap: 'normal',
             zIndex: 2,
           }}
+        />
+
+        {/* MAML 代码补全层 */}
+        <MAMLCodeCompletion
+          code={code}
+          cursorPosition={cursorPosition}
+          elementType={elementType}
+          onAccept={handleAcceptCompletion}
         />
 
         {/* 样式 */}
