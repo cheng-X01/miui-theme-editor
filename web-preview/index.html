@@ -4,11 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MIUI Theme Editor - 在线预览</title>
+  <link rel="stylesheet" href="https://unpkg.com/antd@5.17.0/dist/reset.css">
+  <link rel="stylesheet" href="https://unpkg.com/antd@5.17.0/dist/antd.min.css">
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/antd@5.17.0/dist/reset.css">
+  <script src="https://unpkg.com/@ant-design/icons@5.3.0/dist/index.umd.js"></script>
   <script src="https://unpkg.com/antd@5.17.0/dist/antd.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -38,384 +40,392 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState } = React;
-    const { Layout, Typography, Button, Card, Space, message, Spin, Menu, Descriptions, Tag, Empty } = antd;
-    const { Header, Content, Footer, Sider } = Layout;
-    const { Title, Text } = Typography;
-    const { 
-      FolderOpenOutlined, 
-      FileAddOutlined, 
-      ThunderboltOutlined, 
-      RobotOutlined,
-      PictureOutlined,
-      AppstoreOutlined,
-      BgColorsOutlined,
-      FileTextOutlined,
-      CodeOutlined,
-      MobileOutlined,
-      ArrowLeftOutlined
-    } = icons;
-
-    // 模拟主题数据
-    const mockProject = {
-      name: '示例主题',
-      description: {
-        title: '示例主题',
-        author: 'AI Designer',
-        version: '1.0',
-        description: '这是一个示例主题，用于展示编辑器功能',
-        miuiVersion: '14.0',
-      },
-      resources: {
-        icons: [
-          { packageName: 'com.android.settings' },
-          { packageName: 'com.miui.home' },
-          { packageName: 'com.android.camera' },
-          { packageName: 'com.android.contacts' },
-          { packageName: 'com.android.messaging' },
-        ],
-        wallpapers: [
-          { type: 'desktop' },
-          { type: 'lockscreen' },
-        ]
-      },
-      maml: {
-        manifest: '<?xml version="1.0"?>\n<Lockscreen version="2">\n  <Text x="540" y="800" text="Hello MIUI"/>\n</Lockscreen>',
-        modules: { 'weather': '<WeatherWidget city="Beijing"/>' }
+    // 等待所有库加载完成
+    const checkLibs = () => {
+      if (typeof React === 'undefined' || typeof ReactDOM === 'undefined' || typeof antd === 'undefined' || typeof icons === 'undefined') {
+        setTimeout(checkLibs, 100);
+        return;
       }
+      initApp();
     };
 
-    // 欢迎页组件
-    function WelcomePage({ onOpenProject }) {
-      const [loading, setLoading] = useState(false);
+    const initApp = () => {
+      const { useState } = React;
+      const { Layout, Typography, Button, Card, Space, message, Spin, Menu, Descriptions, Tag, Empty } = antd;
+      const { Header, Content, Footer, Sider } = Layout;
+      const { Title, Text } = Typography;
+      const { 
+        FolderOpenOutlined, 
+        FileAddOutlined, 
+        ThunderboltOutlined, 
+        RobotOutlined,
+        PictureOutlined,
+        AppstoreOutlined,
+        BgColorsOutlined,
+        FileTextOutlined,
+        CodeOutlined,
+        MobileOutlined,
+        ArrowLeftOutlined
+      } = icons;
 
-      const handleOpenTheme = () => {
-        setLoading(true);
-        setTimeout(() => {
-          setLoading(false);
-          onOpenProject(mockProject);
-        }, 800);
-      };
-
-      const handleNewTheme = () => {
-        message.info('创建新主题 - 功能开发中');
-      };
-
-      return (
-        <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' }}>
-          <Header style={{ 
-            background: 'transparent', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            padding: '0 48px',
-            height: 80
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ 
-                width: 48, 
-                height: 48, 
-                borderRadius: 12, 
-                background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 24
-              }}>
-                🎨
-              </div>
-              <Title level={3} style={{ margin: 0, color: '#fff' }}>
-                MIUI Theme Editor
-              </Title>
-            </div>
-            <Space>
-              <Button type="text" icon={<RobotOutlined />} style={{ color: '#888' }}>
-                AI 助手
-              </Button>
-            </Space>
-          </Header>
-
-          <Content style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            flex: 1,
-            padding: '0 24px'
-          }}>
-            <div style={{ textAlign: 'center', marginBottom: 48 }}>
-              <Title level={1} style={{ color: '#fff', marginBottom: 16 }}>
-                欢迎使用 MIUI 主题编辑器
-              </Title>
-              <Text style={{ color: '#888', fontSize: 16 }}>
-                AI 驱动的全功能小米主题编辑工具 · 支持图标、壁纸、MAML 动画、一键推送
-              </Text>
-            </div>
-
-            <Space size="large" direction="horizontal">
-              <Card
-                hoverable
-                onClick={handleOpenTheme}
-                style={{ 
-                  width: 280, 
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  backdropFilter: 'blur(10px)',
-                }}
-                cover={
-                  <div style={{ 
-                    height: 160, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    borderRadius: '8px 8px 0 0'
-                  }}>
-                    <FolderOpenOutlined style={{ fontSize: 64, color: '#fff' }} />
-                  </div>
-                }
-              >
-                <Card.Meta 
-                  title={<span style={{ color: '#fff' }}>打开主题</span>}
-                  description={<span style={{ color: '#888' }}>选择 .mtz 文件进行编辑</span>}
-                />
-              </Card>
-
-              <Card
-                hoverable
-                onClick={handleNewTheme}
-                style={{ 
-                  width: 280, 
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  backdropFilter: 'blur(10px)',
-                }}
-                cover={
-                  <div style={{ 
-                    height: 160, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                    borderRadius: '8px 8px 0 0'
-                  }}>
-                    <FileAddOutlined style={{ fontSize: 64, color: '#fff' }} />
-                  </div>
-                }
-              >
-                <Card.Meta 
-                  title={<span style={{ color: '#fff' }}>新建主题</span>}
-                  description={<span style={{ color: '#888' }}>从空白模板开始创建</span>}
-                />
-              </Card>
-
-              <Card
-                hoverable
-                onClick={handleNewTheme}
-                style={{ 
-                  width: 280, 
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  backdropFilter: 'blur(10px)',
-                }}
-                cover={
-                  <div style={{ 
-                    height: 160, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                    borderRadius: '8px 8px 0 0'
-                  }}>
-                    <ThunderboltOutlined style={{ fontSize: 64, color: '#fff' }} />
-                  </div>
-                }
-              >
-                <Card.Meta 
-                  title={<span style={{ color: '#fff' }}>AI 一键生成</span>}
-                  description={<span style={{ color: '#888' }}>描述你的想法，AI 自动生成</span>}
-                />
-              </Card>
-            </Space>
-
-            {loading && (
-              <div style={{ marginTop: 32 }}>
-                <Spin size="large" />
-                <Text style={{ display: 'block', marginTop: 16, color: '#888' }}>
-                  正在加载...
-                </Text>
-              </div>
-            )}
-          </Content>
-
-          <Footer style={{ 
-            background: 'transparent', 
-            textAlign: 'center',
-            color: '#666',
-            padding: '24px 0'
-          }}>
-            <Text style={{ color: '#666' }}>
-              MIUI Theme Editor · AI Enhanced · v0.1.0
-            </Text>
-          </Footer>
-        </Layout>
-      );
-    }
-
-    // 编辑器页组件
-    function EditorPage({ project, onBack }) {
-      const [activeKey, setActiveKey] = useState('overview');
-
-      const items = [
-        { key: 'overview', icon: <FileTextOutlined />, label: '概览' },
-        { key: 'icons', icon: <AppstoreOutlined />, label: `图标 (${project.resources.icons?.length || 0})` },
-        { key: 'wallpaper', icon: <PictureOutlined />, label: '壁纸' },
-        { key: 'colors', icon: <BgColorsOutlined />, label: '配色' },
-        { key: 'maml', icon: <CodeOutlined />, label: 'MAML' },
-        { key: 'preview', icon: <MobileOutlined />, label: '预览' },
-      ];
-
-      const renderOverview = () => (
-        <Card title="主题信息" style={{ marginBottom: 16, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-          <Descriptions bordered column={2}>
-            <Descriptions.Item label="主题名称">{project.name}</Descriptions.Item>
-            <Descriptions.Item label="作者">{project.description.author}</Descriptions.Item>
-            <Descriptions.Item label="版本">{project.description.version}</Descriptions.Item>
-            <Descriptions.Item label="适配MIUI版本">{project.description.miuiVersion || '未指定'}</Descriptions.Item>
-            <Descriptions.Item label="描述" span={2}>{project.description.description || '无描述'}</Descriptions.Item>
-          </Descriptions>
-        </Card>
-      );
-
-      const renderIcons = () => (
-        <Card title="图标资源" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-          {project.resources.icons && project.resources.icons.length > 0 ? (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {project.resources.icons.map((icon, index) => (
-                <Tag key={index} color="blue">{icon.packageName}</Tag>
-              ))}
-            </div>
-          ) : <Empty description="暂无图标资源" />}
-        </Card>
-      );
-
-      const renderWallpaper = () => (
-        <Card title="壁纸资源" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-          {project.resources.wallpapers && project.resources.wallpapers.length > 0 ? (
-            <div style={{ display: 'flex', gap: 16 }}>
-              {project.resources.wallpapers.map((wp, index) => (
-                <div key={index} style={{ textAlign: 'center' }}>
-                  <div style={{ 
-                    width: 200, height: 400, background: '#333', borderRadius: 8,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666'
-                  }}>
-                    {wp.type === 'desktop' ? '桌面壁纸' : '锁屏壁纸'}
-                  </div>
-                  <div style={{ marginTop: 8, color: '#888' }}>
-                    {wp.type === 'desktop' ? '桌面壁纸' : '锁屏壁纸'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : <Empty description="暂无壁纸资源" />}
-        </Card>
-      );
-
-      const renderMAML = () => (
-        <Card title="MAML 模块" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-          {project.maml ? (
-            <div>
-              {project.maml.manifest && (
-                <div style={{ marginBottom: 16 }}>
-                  <h4 style={{ color: '#fff' }}>manifest.xml</h4>
-                  <pre style={{ background: '#0f0f23', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 200, color: '#4ec9b0' }}>
-                    {project.maml.manifest.substring(0, 500)}...
-                  </pre>
-                </div>
-              )}
-              {project.maml.modules && Object.keys(project.maml.modules).length > 0 && (
-                <div>
-                  <h4 style={{ color: '#fff' }}>子模块</h4>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {Object.keys(project.maml.modules).map(name => (
-                      <Tag key={name} color="green">{name}</Tag>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : <Empty description="暂无 MAML 模块" />}
-        </Card>
-      );
-
-      const renderContent = () => {
-        switch (activeKey) {
-          case 'overview': return renderOverview();
-          case 'icons': return renderIcons();
-          case 'wallpaper': return renderWallpaper();
-          case 'maml': return renderMAML();
-          default: return <Empty description="功能开发中" />;
+      // 模拟主题数据
+      const mockProject = {
+        name: '示例主题',
+        description: {
+          title: '示例主题',
+          author: 'AI Designer',
+          version: '1.0',
+          description: '这是一个示例主题，用于展示编辑器功能',
+          miuiVersion: '14.0',
+        },
+        resources: {
+          icons: [
+            { packageName: 'com.android.settings' },
+            { packageName: 'com.miui.home' },
+            { packageName: 'com.android.camera' },
+            { packageName: 'com.android.contacts' },
+            { packageName: 'com.android.messaging' },
+          ],
+          wallpapers: [
+            { type: 'desktop' },
+            { type: 'lockscreen' },
+          ]
+        },
+        maml: {
+          manifest: '<?xml version="1.0"?>\n<Lockscreen version="2">\n  <Text x="540" y="800" text="Hello MIUI"/>\n</Lockscreen>',
+          modules: { 'weather': '<WeatherWidget city="Beijing"/>' }
         }
       };
 
-      return (
-        <Layout style={{ minHeight: '100vh', background: '#1a1a2e' }}>
-          <Sider width={200} style={{ background: '#16213e', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ padding: 16, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-              <Button 
-                type="text" 
-                icon={<ArrowLeftOutlined />} 
-                onClick={onBack}
-                style={{ color: '#888', marginBottom: 8 }}
-              >
-                返回
-              </Button>
-              <h3 style={{ margin: 0, color: '#fff' }}>{project.name}</h3>
-              <div style={{ color: '#888', fontSize: 12, marginTop: 4 }}>{project.description.author}</div>
-            </div>
-            <Menu
-              mode="inline"
-              selectedKeys={[activeKey]}
-              onClick={({ key }) => setActiveKey(key)}
-              style={{ background: 'transparent', border: 'none' }}
-              theme="dark"
-              items={items}
-            />
-          </Sider>
-          <Content style={{ padding: 24, overflow: 'auto' }}>
-            {renderContent()}
-          </Content>
-        </Layout>
-      );
-    }
+      // 欢迎页组件
+      function WelcomePage({ onOpenProject }) {
+        const [loading, setLoading] = useState(false);
 
-    // 主应用
-    function App() {
-      const [currentProject, setCurrentProject] = useState(null);
+        const handleOpenTheme = () => {
+          setLoading(true);
+          setTimeout(() => {
+            setLoading(false);
+            onOpenProject(mockProject);
+          }, 800);
+        };
 
-      return (
-        <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e' }}>
-          {currentProject ? (
-            <EditorPage 
-              project={currentProject} 
-              onBack={() => setCurrentProject(null)} 
-            />
-          ) : (
-            <WelcomePage onOpenProject={setCurrentProject} />
-          )}
-        </div>
-      );
-    }
+        const handleNewTheme = () => {
+          message.info('创建新主题 - 功能开发中');
+        };
 
-    // 渲染
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
-  
-  <!-- Ant Design Icons -->
-  <script src="https://unpkg.com/@ant-design/icons@5.3.0/dist/index.umd.js"></script>
-  <script>
-    window.icons = window['@ant-design/icons'];
+        return (
+          <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' }}>
+            <Header style={{ 
+              background: 'transparent', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              padding: '0 48px',
+              height: 80
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ 
+                  width: 48, 
+                  height: 48, 
+                  borderRadius: 12, 
+                  background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 24
+                }}>
+                  🎨
+                </div>
+                <Title level={3} style={{ margin: 0, color: '#fff' }}>
+                  MIUI Theme Editor
+                </Title>
+              </div>
+              <Space>
+                <Button type="text" icon={<RobotOutlined />} style={{ color: '#888' }}>
+                  AI 助手
+                </Button>
+              </Space>
+            </Header>
+
+            <Content style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              flex: 1,
+              padding: '0 24px'
+            }}>
+              <div style={{ textAlign: 'center', marginBottom: 48 }}>
+                <Title level={1} style={{ color: '#fff', marginBottom: 16 }}>
+                  欢迎使用 MIUI 主题编辑器
+                </Title>
+                <Text style={{ color: '#888', fontSize: 16 }}>
+                  AI 驱动的全功能小米主题编辑工具 · 支持图标、壁纸、MAML 动画、一键推送
+                </Text>
+              </div>
+
+              <Space size="large" direction="horizontal">
+                <Card
+                  hoverable
+                  onClick={handleOpenTheme}
+                  style={{ 
+                    width: 280, 
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(10px)',
+                  }}
+                  cover={
+                    <div style={{ 
+                      height: 160, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      borderRadius: '8px 8px 0 0'
+                    }}>
+                      <FolderOpenOutlined style={{ fontSize: 64, color: '#fff' }} />
+                    </div>
+                  }
+                >
+                  <Card.Meta 
+                    title={<span style={{ color: '#fff' }}>打开主题</span>}
+                    description={<span style={{ color: '#888' }}>选择 .mtz 文件进行编辑</span>}
+                  />
+                </Card>
+
+                <Card
+                  hoverable
+                  onClick={handleNewTheme}
+                  style={{ 
+                    width: 280, 
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(10px)',
+                  }}
+                  cover={
+                    <div style={{ 
+                      height: 160, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                      borderRadius: '8px 8px 0 0'
+                    }}>
+                      <FileAddOutlined style={{ fontSize: 64, color: '#fff' }} />
+                    </div>
+                  }
+                >
+                  <Card.Meta 
+                    title={<span style={{ color: '#fff' }}>新建主题</span>}
+                    description={<span style={{ color: '#888' }}>从空白模板开始创建</span>}
+                  />
+                </Card>
+
+                <Card
+                  hoverable
+                  onClick={handleNewTheme}
+                  style={{ 
+                    width: 280, 
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(10px)',
+                  }}
+                  cover={
+                    <div style={{ 
+                      height: 160, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                      borderRadius: '8px 8px 0 0'
+                    }}>
+                      <ThunderboltOutlined style={{ fontSize: 64, color: '#fff' }} />
+                    </div>
+                  }
+                >
+                  <Card.Meta 
+                    title={<span style={{ color: '#fff' }}>AI 一键生成</span>}
+                    description={<span style={{ color: '#888' }}>描述你的想法，AI 自动生成</span>}
+                  />
+                </Card>
+              </Space>
+
+              {loading && (
+                <div style={{ marginTop: 32 }}>
+                  <Spin size="large" />
+                  <Text style={{ display: 'block', marginTop: 16, color: '#888' }}>
+                    正在加载...
+                  </Text>
+                </div>
+              )}
+            </Content>
+
+            <Footer style={{ 
+              background: 'transparent', 
+              textAlign: 'center',
+              color: '#666',
+              padding: '24px 0'
+            }}>
+              <Text style={{ color: '#666' }}>
+                MIUI Theme Editor · AI Enhanced · v0.1.0
+              </Text>
+            </Footer>
+          </Layout>
+        );
+      }
+
+      // 编辑器页组件
+      function EditorPage({ project, onBack }) {
+        const [activeKey, setActiveKey] = useState('overview');
+
+        const items = [
+          { key: 'overview', icon: <FileTextOutlined />, label: '概览' },
+          { key: 'icons', icon: <AppstoreOutlined />, label: `图标 (${project.resources.icons?.length || 0})` },
+          { key: 'wallpaper', icon: <PictureOutlined />, label: '壁纸' },
+          { key: 'colors', icon: <BgColorsOutlined />, label: '配色' },
+          { key: 'maml', icon: <CodeOutlined />, label: 'MAML' },
+          { key: 'preview', icon: <MobileOutlined />, label: '预览' },
+        ];
+
+        const renderOverview = () => (
+          <Card title="主题信息" style={{ marginBottom: 16, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Descriptions bordered column={2}>
+              <Descriptions.Item label="主题名称">{project.name}</Descriptions.Item>
+              <Descriptions.Item label="作者">{project.description.author}</Descriptions.Item>
+              <Descriptions.Item label="版本">{project.description.version}</Descriptions.Item>
+              <Descriptions.Item label="适配MIUI版本">{project.description.miuiVersion || '未指定'}</Descriptions.Item>
+              <Descriptions.Item label="描述" span={2}>{project.description.description || '无描述'}</Descriptions.Item>
+            </Descriptions>
+          </Card>
+        );
+
+        const renderIcons = () => (
+          <Card title="图标资源" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {project.resources.icons && project.resources.icons.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {project.resources.icons.map((icon, index) => (
+                  <Tag key={index} color="blue">{icon.packageName}</Tag>
+                ))}
+              </div>
+            ) : <Empty description="暂无图标资源" />}
+          </Card>
+        );
+
+        const renderWallpaper = () => (
+          <Card title="壁纸资源" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {project.resources.wallpapers && project.resources.wallpapers.length > 0 ? (
+              <div style={{ display: 'flex', gap: 16 }}>
+                {project.resources.wallpapers.map((wp, index) => (
+                  <div key={index} style={{ textAlign: 'center' }}>
+                    <div style={{ 
+                      width: 200, height: 400, background: '#333', borderRadius: 8,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666'
+                    }}>
+                      {wp.type === 'desktop' ? '桌面壁纸' : '锁屏壁纸'}
+                    </div>
+                    <div style={{ marginTop: 8, color: '#888' }}>
+                      {wp.type === 'desktop' ? '桌面壁纸' : '锁屏壁纸'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : <Empty description="暂无壁纸资源" />}
+          </Card>
+        );
+
+        const renderMAML = () => (
+          <Card title="MAML 模块" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {project.maml ? (
+              <div>
+                {project.maml.manifest && (
+                  <div style={{ marginBottom: 16 }}>
+                    <h4 style={{ color: '#fff' }}>manifest.xml</h4>
+                    <pre style={{ background: '#0f0f23', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 200, color: '#4ec9b0' }}>
+                      {project.maml.manifest.substring(0, 500)}...
+                    </pre>
+                  </div>
+                )}
+                {project.maml.modules && Object.keys(project.maml.modules).length > 0 && (
+                  <div>
+                    <h4 style={{ color: '#fff' }}>子模块</h4>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {Object.keys(project.maml.modules).map(name => (
+                        <Tag key={name} color="green">{name}</Tag>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : <Empty description="暂无 MAML 模块" />}
+          </Card>
+        );
+
+        const renderContent = () => {
+          switch (activeKey) {
+            case 'overview': return renderOverview();
+            case 'icons': return renderIcons();
+            case 'wallpaper': return renderWallpaper();
+            case 'maml': return renderMAML();
+            default: return <Empty description="功能开发中" />;
+          }
+        };
+
+        return (
+          <Layout style={{ minHeight: '100vh', background: '#1a1a2e' }}>
+            <Sider width={200} style={{ background: '#16213e', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ padding: 16, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <Button 
+                  type="text" 
+                  icon={<ArrowLeftOutlined />} 
+                  onClick={onBack}
+                  style={{ color: '#888', marginBottom: 8 }}
+                >
+                  返回
+                </Button>
+                <h3 style={{ margin: 0, color: '#fff' }}>{project.name}</h3>
+                <div style={{ color: '#888', fontSize: 12, marginTop: 4 }}>{project.description.author}</div>
+              </div>
+              <Menu
+                mode="inline"
+                selectedKeys={[activeKey]}
+                onClick={({ key }) => setActiveKey(key)}
+                style={{ background: 'transparent', border: 'none' }}
+                theme="dark"
+                items={items}
+              />
+            </Sider>
+            <Content style={{ padding: 24, overflow: 'auto' }}>
+              {renderContent()}
+            </Content>
+          </Layout>
+        );
+      }
+
+      // 主应用
+      function App() {
+        const [currentProject, setCurrentProject] = useState(null);
+
+        return (
+          <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e' }}>
+            {currentProject ? (
+              <EditorPage 
+                project={currentProject} 
+                onBack={() => setCurrentProject(null)} 
+              />
+            ) : (
+              <WelcomePage onOpenProject={setCurrentProject} />
+            )}
+          </div>
+        );
+      }
+
+      // 渲染
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    };
+
+    // 启动检查
+    checkLibs();
   </script>
 </body>
 </html>
