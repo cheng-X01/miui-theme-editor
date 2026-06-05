@@ -7,9 +7,13 @@
  * - 中间内容区（flex: 1）：根据选中模块渲染对应编辑器
  * - 右侧属性面板（280px）：根据当前模块显示属性
  * - 底部状态栏（32px）：文件数、资源大小、MIUI版本、上次保存时间
+ *
+ * AI 集成：
+ * - AIChatPanel：完整的 AI 对话面板，替换原有的简单 AI Drawer
+ * - AIGenerateButtons：在各编辑器模块上方嵌入 AI 快捷操作按钮
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   Layout,
   Button,
@@ -25,7 +29,6 @@ import {
   Card,
   Form,
   message,
-  Drawer,
   List,
 } from 'antd';
 import {
@@ -44,6 +47,10 @@ import {
   PhoneOutlined,
 } from '@ant-design/icons';
 import type { ThemeProject } from '../../../shared/types';
+
+// AI 组件
+import { AIChatPanel } from '../../ai/components/AIChatPanel';
+import { AIGenerateButtons } from '../../ai/components/AIGenerateButtons';
 
 // 编辑器组件
 import IconEditor from '../../editors/IconEditor';
@@ -88,12 +95,14 @@ const styles = {
 const EditorPage: React.FC<EditorPageProps> = ({ project, onBack }) => {
   const [activeKey, setActiveKey] = useState('overview');
   const [themeName, setThemeName] = useState(project.description.name);
-  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
-  const [aiInput, setAiInput] = useState('');
-  const [aiMessages, setAiMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [aiInputText, setAiInputText] = useState('');
   const [lastSavedTime, setLastSavedTime] = useState<string>(
     project.updatedAt ? new Date(project.updatedAt).toLocaleString('zh-CN') : '未保存'
   );
+
+  // AI Chat Panel 引用，用于通过快捷按钮发送消息
+  const aiPanelRef = useRef<{ sendMessage?: (text: string) => void }>({});
 
   // ==================== 计算属性 ====================
 
@@ -234,27 +243,11 @@ const EditorPage: React.FC<EditorPageProps> = ({ project, onBack }) => {
     }
   };
 
-  /** 处理 AI 助手发送消息 */
-  const handleAiSend = async () => {
-    if (!aiInput.trim()) return;
-
-    const userMessage = aiInput.trim();
-    setAiInput('');
-    setAiMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
-
-    try {
-      const result = await window.electronAPI.aiGenerateText({
-        prompt: userMessage,
-        systemPrompt: '你是一个 MIUI 主题设计助手，帮助用户设计、优化和调试 MIUI 主题。',
-      });
-      setAiMessages((prev) => [...prev, { role: 'assistant', content: result.text }]);
-    } catch (error: any) {
-      setAiMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: `抱歉，发生了错误: ${error.message}` },
-      ]);
-    }
-  };
+  /** 处理 AI 快捷按钮生成 */
+  const handleAIGenerate = useCallback((prompt: string) => {
+    setAiInputText(prompt);
+    setAiPanelOpen(true);
+  }, []);
 
   // ==================== 渲染中间内容区 ====================
 
@@ -263,11 +256,11 @@ const EditorPage: React.FC<EditorPageProps> = ({ project, onBack }) => {
       case 'overview':
         return renderOverview();
       case 'icons':
-        return <IconEditor project={project} />;
+        return renderIcons();
       case 'wallpaper':
-        return <WallpaperEditor project={project} />;
+        return renderWallpaper();
       case 'colors':
-        return <ColorEditor project={project} />;
+        return renderColors();
       case 'fonts':
         return <FontEditor project={project} />;
       case 'sounds':
@@ -338,6 +331,75 @@ const EditorPage: React.FC<EditorPageProps> = ({ project, onBack }) => {
     );
   };
 
+  /** 渲染图标编辑器区域（含 AI 快捷按钮） */
+  const renderIcons = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 12px',
+          background: styles.navBg,
+          border: `1px solid ${styles.borderColor}`,
+          borderRadius: '6px',
+        }}
+      >
+        <Text strong style={{ color: styles.textPrimary, fontSize: '14px' }}>
+          图标编辑器
+        </Text>
+        <AIGenerateButtons module="icon" onGenerate={handleAIGenerate} />
+      </div>
+      <IconEditor project={project} />
+    </div>
+  );
+
+  /** 渲染壁纸编辑器区域（含 AI 快捷按钮） */
+  const renderWallpaper = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 12px',
+          background: styles.navBg,
+          border: `1px solid ${styles.borderColor}`,
+          borderRadius: '6px',
+        }}
+      >
+        <Text strong style={{ color: styles.textPrimary, fontSize: '14px' }}>
+          壁纸编辑器
+        </Text>
+        <AIGenerateButtons module="wallpaper" onGenerate={handleAIGenerate} />
+      </div>
+      <WallpaperEditor project={project} />
+    </div>
+  );
+
+  /** 渲染配色编辑器区域（含 AI 快捷按钮） */
+  const renderColors = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 12px',
+          background: styles.navBg,
+          border: `1px solid ${styles.borderColor}`,
+          borderRadius: '6px',
+        }}
+      >
+        <Text strong style={{ color: styles.textPrimary, fontSize: '14px' }}>
+          配色编辑器
+        </Text>
+        <AIGenerateButtons module="color" onGenerate={handleAIGenerate} />
+      </div>
+      <ColorEditor project={project} />
+    </div>
+  );
+
   /** 渲染音效（占位） */
   const renderSounds = () => {
     const { sounds } = project.resources;
@@ -379,11 +441,29 @@ const EditorPage: React.FC<EditorPageProps> = ({ project, onBack }) => {
     );
   };
 
-  /** 渲染 MAML 编辑器（textarea 占位） */
+  /** 渲染 MAML 编辑器（含 AI 快捷按钮） */
   const renderMAML = () => {
     const { mamlModules } = project.resources;
     return (
-      <div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {/* AI 快捷按钮栏 */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '8px 12px',
+            background: styles.navBg,
+            border: `1px solid ${styles.borderColor}`,
+            borderRadius: '6px',
+          }}
+        >
+          <Text strong style={{ color: styles.textPrimary, fontSize: '14px' }}>
+            MAML 编辑器
+          </Text>
+          <AIGenerateButtons module="maml" onGenerate={handleAIGenerate} />
+        </div>
+
         <Card
           title="MAML 模块"
           size="small"
@@ -751,7 +831,7 @@ const EditorPage: React.FC<EditorPageProps> = ({ project, onBack }) => {
           <Button
             type="primary"
             icon={<RobotOutlined />}
-            onClick={() => setAiDrawerOpen(true)}
+            onClick={() => setAiPanelOpen(true)}
             style={{ background: '#4a6cf7' }}
           >
             AI助手
@@ -901,89 +981,15 @@ const EditorPage: React.FC<EditorPageProps> = ({ project, onBack }) => {
         </Space>
       </div>
 
-      {/* ========== AI 助手抽屉 ========== */}
-      <Drawer
-        title={
-          <Space>
-            <RobotOutlined style={{ color: '#4a6cf7' }} />
-            <span>AI 主题助手</span>
-          </Space>
-        }
-        placement="right"
-        width="400px"
-        open={aiDrawerOpen}
-        onClose={() => setAiDrawerOpen(false)}
-        styles={{
-          header: { background: styles.toolbarBg, borderBottom: `1px solid ${styles.borderColor}` },
-          body: { background: styles.contentBg, padding: 0, display: 'flex', flexDirection: 'column' },
+      {/* ========== AI 对话面板（替换原有简单 Drawer） ========== */}
+      <AIChatPanel
+        visible={aiPanelOpen}
+        onClose={() => setAiPanelOpen(false)}
+        context={{
+          projectName: themeName,
+          activeModule: activeKey,
         }}
-        closeIcon={<span style={{ color: styles.textSecondary }}>关闭</span>}
-      >
-        {/* 消息列表 */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-          {aiMessages.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <RobotOutlined style={{ fontSize: '48px', color: styles.textMuted, marginBottom: '16px', display: 'block' }} />
-              <Text style={{ color: styles.textSecondary }}>
-                你好！我是 MIUI 主题设计助手，可以帮你优化配色方案、生成图标描述、调试 MAML 代码等。
-              </Text>
-            </div>
-          ) : (
-            aiMessages.map((msg, index) => (
-              <div
-                key={index}
-                style={{
-                  marginBottom: '12px',
-                  display: 'flex',
-                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                }}
-              >
-                <div
-                  style={{
-                    maxWidth: '85%',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    background: msg.role === 'user' ? '#4a6cf7' : styles.navBg,
-                    color: styles.textPrimary,
-                    fontSize: '13px',
-                    lineHeight: '1.6',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  {msg.content}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* 输入区域 */}
-        <div
-          style={{
-            padding: '12px 16px',
-            borderTop: `1px solid ${styles.borderColor}`,
-            display: 'flex',
-            gap: '8px',
-          }}
-        >
-          <Input
-            value={aiInput}
-            onChange={(e) => setAiInput(e.target.value)}
-            onPressEnter={handleAiSend}
-            placeholder="输入你的问题..."
-            style={{
-              flex: 1,
-              background: styles.toolbarBg,
-              borderColor: styles.borderColor,
-              color: styles.textPrimary,
-            }}
-          />
-          <Button type="primary" onClick={handleAiSend} style={{ background: '#4a6cf7' }}>
-            发送
-          </Button>
-        </div>
-      </Drawer>
+      />
     </Layout>
   );
 };
