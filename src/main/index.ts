@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import { IPC_CHANNELS } from '../shared/types';
 import { MTZParser } from './engine/mtz-parser';
 import { MTZPacker } from './engine/mtz-packer';
+import { registerDeviceHandlers, unregisterDeviceHandlers } from './ipc/device-handler';
 
 // ==================== 全局变量 ====================
 
@@ -161,35 +162,8 @@ function setupIPC(): void {
 
   // ---------- ADB 设备管理 ----------
 
-  /** 列出已连接的设备 */
-  ipcMain.handle(IPC_CHANNELS.LIST_DEVICES, async () => {
-    try {
-      // TODO: 集成 adbkit 实现设备列表
-      return { success: true, data: [] };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  /** 推送主题到设备 */
-  ipcMain.handle(IPC_CHANNELS.PUSH_THEME, async (_event, _deviceSerial: string, _filePath: string) => {
-    try {
-      // TODO: 集成 adbkit 实现主题推送
-      return { success: true, data: null };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  /** 应用主题到设备 */
-  ipcMain.handle(IPC_CHANNELS.APPLY_THEME, async (_event, _deviceSerial: string, _packageName: string) => {
-    try {
-      // TODO: 集成 adbkit 实现主题应用
-      return { success: true, data: null };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
+  /** 注册设备 IPC 处理器（adbkit 集成） */
+  registerDeviceHandlers();
 
   // ---------- AI 功能 ----------
 
@@ -231,6 +205,9 @@ app.whenReady().then(() => {
 
 // 所有窗口关闭
 app.on('window-all-closed', () => {
+  // 注销设备 IPC 处理器，释放资源
+  unregisterDeviceHandlers();
+
   // macOS 上保持应用运行
   if (process.platform !== 'darwin') {
     app.quit();

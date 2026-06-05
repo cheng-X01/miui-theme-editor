@@ -20,11 +20,19 @@ export const IPC_CHANNELS = {
   /** 打包 MTZ 主题包 */
   PACK_MTZ: 'mtz:pack',
   /** 列出已连接设备 */
-  LIST_DEVICES: 'adb:list-devices',
+  LIST_DEVICES: 'device:list',
+  /** 获取设备详细信息 */
+  GET_DEVICE_INFO: 'device:info',
   /** 推送主题到设备 */
-  PUSH_THEME: 'adb:push-theme',
+  PUSH_THEME: 'device:push',
   /** 应用主题到设备 */
-  APPLY_THEME: 'adb:apply-theme',
+  APPLY_THEME: 'device:apply',
+  /** 截屏 */
+  SCREENSHOT: 'device:screenshot',
+  /** WiFi 连接设备 */
+  CONNECT_WIFI: 'device:connect-wifi',
+  /** 监控设备连接状态 */
+  MONITOR_DEVICES: 'device:monitor',
   /** AI 生成文本 */
   AI_GENERATE_TEXT: 'ai:generate-text',
   /** AI 流式生成文本 */
