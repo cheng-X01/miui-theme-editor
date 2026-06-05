@@ -28,6 +28,7 @@
     "event-source-polyfill": "^1.0.0",
     "fabric": "^5.3.0",
     "fast-xml-parser": "^4.3.0",
+    "immer": "^11.1.8",
     "jszip": "^3.10.0",
     "lodash-es": "^4.17.0",
     "lottie-react": "^2.4.0",

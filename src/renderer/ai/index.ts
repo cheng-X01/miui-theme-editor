@@ -54,3 +54,27 @@ export { AIGenerateButtons } from './components/AIGenerateButtons';
 
 /** AI 代码块：带语法高亮和复制/应用操作的代码展示组件 */
 export { AICodeBlock } from './components/AICodeBlock';
+
+// ==================== NL2Theme 一键主题生成 ====================
+
+/** NL2Theme 核心引擎：自然语言描述 → 完整 MIUI 主题的生成 Pipeline */
+export {
+  NL2ThemeEngine,
+  getNL2ThemeEngine,
+  THEME_STYLE_LABELS,
+  MIUI_VERSIONS,
+} from './core/NL2ThemeEngine';
+
+/** NL2Theme 相关类型 */
+export type {
+  ThemeGenerationRequest,
+  GenerationStep,
+  ThemeGenerationResult,
+  ThemeIntent,
+  ColorScheme,
+  ThemeStyle,
+} from './core/NL2ThemeEngine';
+
+/** NL2Theme 交互面板：用户输入自然语言描述，一键生成主题 */
+export { NL2ThemePanel } from './components/NL2ThemePanel';
+export type { NL2ThemePanelProps } from './components/NL2ThemePanel';

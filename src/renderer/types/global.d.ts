@@ -27,6 +27,8 @@ interface ElectronAPI {
   aiGenerateText: (request: any) => Promise<any>;
   /** AI 流式生成文本 */
   aiStreamText: (request: any) => Promise<any>;
+  /** 窗口关闭前回调（返回 false 阻止关闭） */
+  onBeforeClose?: (callback: () => boolean) => () => void;
 }
 
 declare global {
