@@ -1,0 +1,99 @@
+# GitHub Actions CI/CD 工作流 - 自动构建并发布 Electron 应用
+# 触发条件：推送以 v 开头的标签时触发（如 v0.1.0）
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  # 构建任务 - 使用矩阵策略在三个平台并行构建
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      # 步骤 1：检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 步骤 2：设置 Node.js 环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # 步骤 3：安装依赖
+      - name: Install dependencies
+        run: npm ci
+
+      # 步骤 4：构建渲染进程和主进程
+      - name: Build renderer and main
+        run: |
+          npm run build:renderer
+          npm run build:main
+
+      # 步骤 5：构建 Electron 应用
+      - name: Build Electron app
+        run: npm run dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 步骤 6：上传构建产物
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.os }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.deb
+            release/*.zip
+            release/*.tar.gz
+            release/*.yml
+            release/*.blockmap
+          if-no-files-found: ignore
+
+  # 发布任务 - 收集所有平台产物并创建 GitHub Release
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      # 步骤 1：检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 步骤 2：下载所有构建产物
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      # 步骤 3：列出产物文件
+      - name: List artifacts
+        run: |
+          echo "构建产物列表："
+          find artifacts -type f | sort
+
+      # 步骤 4：创建 GitHub Release
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

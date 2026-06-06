@@ -79,11 +79,9 @@
       "dist/renderer/**/*",
       "package.json"
     ],
-    "extraResources": [
-      {
-        "from": "resources",
-        "to": "resources"
-      }
+    "asarUnpack": [
+      "**/*.node",
+      "node_modules/sharp/**/*"
     ],
     "mac": {
       "target": [
@@ -146,6 +144,9 @@
       "createStartMenuShortcut": true,
       "shortcutName": "MIUI Theme Editor",
       "include": "build/installer.nsh"
+    },
+    "electronDownload": {
+      "mirror": "https://npmmirror.com/mirrors/electron/"
     },
     "publish": null
   }
