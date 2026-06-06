@@ -1,3 +1,6 @@
 node_modules/
 dist/
 .gitignore
+release/
+dist/
+node_modules/
