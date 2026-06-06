@@ -7,7 +7,7 @@
 // ==================== 类型定义 ====================
 
 /** AI Provider 类型 */
-export type AIProviderType = 'openai' | 'claude' | 'ollama' | 'custom';
+export type AIProviderType = 'openai' | 'claude' | 'qwen' | 'ollama' | 'custom';
 
 /** AI Provider 配置 */
 export interface AIProviderConfig {
@@ -56,7 +56,17 @@ const DEFAULT_PROVIDERS: AIProviderConfig[] = [
     name: 'Claude',
     provider: 'claude',
     endpoint: 'https://api.anthropic.com/v1',
-    model: 'claude-3-sonnet-20240229',
+    model: 'claude-3-5-sonnet-20241022',
+    maxTokens: 4096,
+    temperature: 0.7,
+    enabled: false,
+  },
+  {
+    id: 'qwen-default',
+    name: 'Qwen',
+    provider: 'qwen',
+    endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: 'qwen-turbo',
     maxTokens: 4096,
     temperature: 0.7,
     enabled: false,
@@ -83,9 +93,15 @@ export const RECOMMENDED_MODELS: Record<AIProviderType, string[]> = {
     'gpt-3.5-turbo',
   ],
   claude: [
+    'claude-3-5-sonnet-20241022',
     'claude-3-opus-20240229',
-    'claude-3-sonnet-20240229',
     'claude-3-haiku-20240307',
+  ],
+  qwen: [
+    'qwen-turbo',
+    'qwen-plus',
+    'qwen-max',
+    'qwen-vl-max',
   ],
   ollama: [
     'llama3',
@@ -105,6 +121,7 @@ export const RECOMMENDED_MODELS: Record<AIProviderType, string[]> = {
 export const PROVIDER_LABELS: Record<AIProviderType, string> = {
   openai: 'OpenAI',
   claude: 'Claude (Anthropic)',
+  qwen: '通义千问 (Qwen)',
   ollama: 'Ollama (本地)',
   custom: '自定义',
 };

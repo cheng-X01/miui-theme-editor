@@ -174,13 +174,12 @@ export class AIOrchestrator {
         return new OpenAIProvider(baseConfig);
       }
       case 'claude': {
-        // Claude Provider 暂使用 OpenAI 兼容格式（如通过代理）
-        // 实际项目中可创建专门的 ClaudeProvider
-        const { OpenAIProvider } = require('../providers/OpenAIProvider');
-        return new OpenAIProvider({
-          ...baseConfig,
-          type: 'openai',
-        });
+        const { ClaudeProvider } = require('../providers/ClaudeProvider');
+        return new ClaudeProvider(baseConfig);
+      }
+      case 'qwen': {
+        const { QwenProvider } = require('../providers/QwenProvider');
+        return new QwenProvider(baseConfig);
       }
       case 'ollama': {
         // Ollama 使用 OpenAI 兼容 API

@@ -10,7 +10,7 @@ export interface AIProviderConfig {
   /** 提供者名称 */
   name: string;
   /** 提供者类型 */
-  type: 'openai' | 'ollama' | 'custom';
+  type: 'openai' | 'ollama' | 'claude' | 'qwen' | 'custom';
   /** API 地址 */
   baseUrl: string;
   /** API 密钥 */
