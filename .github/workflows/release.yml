@@ -97,3 +97,44 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 步骤 5：同步到 Gitee Release（国内下载加速）
+      - name: Sync to Gitee Release
+        if: ${{ secrets.GITEE_TOKEN != '' }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          REPO="cheng1992/miui-theme-editor-releases"
+          GITEE_API="https://gitee.com/api/v5"
+
+          # 1. 创建或获取 Gitee Release
+          RELEASE_RESP=$(curl -s -X POST "${GITEE_API}/repos/${REPO}/releases" \
+            -H "Content-Type: application/json" \
+            -d "{\"access_token\":\"${{ secrets.GITEE_TOKEN }}\",\"tag_name\":\"${TAG}\",\"name\":\"MIUI Theme Editor ${TAG}\",\"body\":\"自动同步自 GitHub Releases\",\"prerelease\":false}")
+          RELEASE_ID=$(echo "$RELEASE_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
+
+          if [ -z "$RELEASE_ID" ]; then
+            # Release 可能已存在，尝试获取
+            RELEASE_RESP=$(curl -s "${GITEE_API}/repos/${REPO}/releases/tags/${TAG}?access_token=${{ secrets.GITEE_TOKEN }}")
+            RELEASE_ID=$(echo "$RELEASE_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
+          fi
+
+          if [ -z "$RELEASE_ID" ]; then
+            echo "Failed to create or get Gitee Release"
+            exit 1
+          fi
+
+          echo "Gitee Release ID: $RELEASE_ID"
+
+          # 2. 上传所有产物到 Gitee Release
+          for file in artifacts/*; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              echo "Uploading $filename ..."
+              curl -s -X POST "${GITEE_API}/repos/${REPO}/releases/${RELEASE_ID}/attach_files" \
+                -F "access_token=${{ secrets.GITEE_TOKEN }}" \
+                -F "file=@${file}"
+              echo ""
+            fi
+          done
+
+          echo "Gitee Release sync completed: https://gitee.com/${REPO}/releases/${TAG}"
