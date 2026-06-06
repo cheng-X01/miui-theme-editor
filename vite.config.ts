@@ -32,5 +32,5 @@ export default defineConfig({
   },
 
   // 开发模式下处理主进程
-  plugins: [] as any[], // vite-plugin-electron 会在运行时注入
+  // vite-plugin-electron 会在运行时注入额外插件
 });
