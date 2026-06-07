@@ -45,7 +45,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 步骤 6：上传构建产物
+      # 步骤 6：构建 Linux arm64 版本（交叉编译）
+      - name: Build Linux arm64
+        if: matrix.os == 'ubuntu-latest'
+        run: npx electron-builder --linux --arm64
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 步骤 7：上传构建产物
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -59,6 +66,17 @@ jobs:
             release/*.tar.gz
             release/*.yml
             release/*.blockmap
+          if-no-files-found: ignore
+
+      # 步骤 8：上传 Linux arm64 产物
+      - name: Upload Linux arm64 artifacts
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-ubuntu-arm64
+          path: |
+            release/*arm64.AppImage
+            release/*arm64.deb
           if-no-files-found: ignore
 
   # 发布任务 - 收集所有平台产物并创建 GitHub Release
