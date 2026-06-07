@@ -29,16 +29,17 @@ const mtzPacker = new MTZPacker();
  * 使用 hiddenInset 样式实现 macOS 风格的无边框标题栏
  */
 function createWindow(): void {
+  const isMac = process.platform === 'darwin';
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1024,
     minHeight: 680,
     title: 'MIUI Theme Editor',
-    // 使用 hiddenInset 样式实现无边框标题栏
-    titleBarStyle: 'hiddenInset',
-    // Windows 下使用无边框窗口
-    frame: process.platform !== 'darwin',
+    // macOS 使用 hiddenInset 样式实现无边框标题栏，Windows 不使用
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
+    // Windows 下使用标准窗口框架，避免兼容性问题
+    frame: !isMac,
     backgroundColor: '#1a1a2e',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -191,7 +192,23 @@ function setupIPC(): void {
 // ==================== 应用生命周期 ====================
 
 // 应用准备就绪
+// 捕获未处理的错误，防止应用静默崩溃
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Windows 下将错误写入日志文件以便调试
+  if (process.platform === 'win32') {
+    const logPath = path.join(app.getPath('userData'), 'error.log');
+    const log = `[${new Date().toISOString()}] Uncaught Exception: ${error.stack || error.message}\n`;
+    fs.appendFileSync(logPath, log);
+  }
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+});
+
 app.whenReady().then(() => {
+  console.log('App is ready, platform:', process.platform);
   createWindow();
   setupIPC();
 
@@ -201,6 +218,20 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+}).catch((error) => {
+  console.error('Failed to initialize app:', error);
+  // Windows 下将启动错误写入日志
+  if (process.platform === 'win32') {
+    const logPath = path.join(app.getPath('userData'), 'startup-error.log');
+    const log = `[${new Date().toISOString()}] Startup Error: ${error.stack || error.message}\n`;
+    try {
+      fs.mkdirSync(path.dirname(logPath), { recursive: true });
+      fs.writeFileSync(logPath, log);
+    } catch (e) {
+      // 忽略写入错误
+    }
+  }
+  app.exit(1);
 });
 
 // 所有窗口关闭
