@@ -90,7 +90,9 @@
         }
       ],
       "category": "public.app-category.graphics-design",
-      "icon": "build/icon.icns"
+      "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
     },
     "win": {
       "target": [
@@ -109,7 +111,9 @@
         }
       ],
       "icon": "build/icon.ico",
-      "publisherName": "MIUI Theme Editor Team"
+      "publisherName": "MIUI Theme Editor Team",
+      "signAndEditExecutable": false,
+      "legalTrademarks": "MIUI Theme Editor"
     },
     "linux": {
       "target": [
@@ -135,9 +139,13 @@
       "synopsis": "全功能小米手机主题编辑生成器",
       "description": "AI增强的MIUI主题编辑器，支持图标、壁纸、MAML动画编辑和一键推送。"
     },
+    "appImage": {
+      "category": "Graphics"
+    },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "MIUI Theme Editor",
