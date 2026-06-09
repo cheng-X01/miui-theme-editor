@@ -96,33 +96,44 @@ jobs:
 
       # 步骤 5：同步 arm64 deb 到 Gitee Release（国内下载加速）
       - name: Sync arm64 deb to Gitee Release
+        if: ${{ secrets.GITEE_TOKEN != '' }}
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        continue-on-error: true
         run: |
-          if [ -z "$GITEE_TOKEN" ]; then
-            echo "GITEE_TOKEN not configured, skipping Gitee sync"
-            exit 0
-          fi
+          set +e  # 禁用错误退出，Gitee 同步失败不应阻塞整个流程
 
           TAG="${GITHUB_REF#refs/tags/}"
           REPO="cheng1992/miui-theme-editor-releases"
           GITEE_API="https://gitee.com/api/v5"
 
+          echo "=== 开始同步到 Gitee Release ==="
+          echo "Tag: ${TAG}"
+          echo "Repo: ${REPO}"
+
+          # 0. 先在 Gitee 仓库创建 tag（如果不存在）
+          TAG_RESP=$(curl -s -X POST "${GITEE_API}/repos/${REPO}/tags" \
+            -H "Content-Type: application/json" \
+            -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"${TAG}\",\"message\":\"auto sync from GitHub\"}")
+          echo "Create tag response: $(echo "$TAG_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('message','ok'))" 2>/dev/null || echo "$TAG_RESP")"
+
           # 1. 创建或获取 Gitee Release
           RELEASE_RESP=$(curl -s -X POST "${GITEE_API}/repos/${REPO}/releases" \
             -H "Content-Type: application/json" \
             -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"${TAG}\",\"name\":\"MIUI Theme Editor ${TAG}\",\"body\":\"自动同步自 GitHub Releases - Linux arm64 deb 安装包\",\"prerelease\":false}")
+          echo "Create release response: $(echo "$RELEASE_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('message','ok') or 'id='+str(d.get('id','')))" 2>/dev/null || echo "$RELEASE_RESP")"
+
           RELEASE_ID=$(echo "$RELEASE_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
 
           if [ -z "$RELEASE_ID" ]; then
-            # Release 可能已存在，尝试获取
+            echo "Release 创建失败或已存在，尝试获取..."
             RELEASE_RESP=$(curl -s "${GITEE_API}/repos/${REPO}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}")
             RELEASE_ID=$(echo "$RELEASE_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
           fi
 
           if [ -z "$RELEASE_ID" ]; then
-            echo "Failed to create or get Gitee Release"
-            exit 1
+            echo "WARNING: Failed to create or get Gitee Release, skipping upload"
+            exit 0
           fi
 
           echo "Gitee Release ID: $RELEASE_ID"
@@ -132,11 +143,17 @@ jobs:
             if [ -f "$file" ]; then
               filename=$(basename "$file")
               echo "Uploading $filename ..."
-              curl -s -X POST "${GITEE_API}/repos/${REPO}/releases/${RELEASE_ID}/attach_files" \
+              UPLOAD_RESP=$(curl -s -w "\n%{http_code}" -X POST "${GITEE_API}/repos/${REPO}/releases/${RELEASE_ID}/attach_files" \
                 -F "access_token=${GITEE_TOKEN}" \
-                -F "file=@${file}"
-              echo ""
+                -F "file=@${file}")
+              HTTP_CODE=$(echo "$UPLOAD_RESP" | tail -1)
+              echo "Upload response HTTP code: ${HTTP_CODE}"
+              if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "201" ]; then
+                echo "WARNING: Upload failed with HTTP ${HTTP_CODE}"
+              else
+                echo "Upload success: $filename"
+              fi
             fi
           done
 
-          echo "Gitee Release sync completed: https://gitee.com/${REPO}/releases/${TAG}"
+          echo "=== Gitee Release sync completed: https://gitee.com/${REPO}/releases/${TAG} ==="
