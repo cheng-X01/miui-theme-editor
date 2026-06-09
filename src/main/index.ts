@@ -1,9 +1,14 @@
 /**
  * MIUI Theme Editor - Electron 主进程入口
  * 负责创建窗口、注册 IPC 处理程序、管理应用生命周期
+ *
+ * 集成功能：
+ * - electron-updater 自动更新（启动时 + 每小时检查）
+ * - 更新状态通过 IPC 发送到渲染进程
  */
 
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
 import * as fs from 'fs';
 import { IPC_CHANNELS } from '../shared/types';
@@ -37,6 +42,138 @@ const mtzParser = new MTZParser();
 
 /** MTZ 打包引擎 */
 const mtzPacker = new MTZPacker();
+
+/** 自动更新定时器 */
+let updateCheckTimer: NodeJS.Timeout | null = null;
+
+// ==================== 自动更新配置 ====================
+
+/**
+ * 配置 electron-updater
+ */
+function setupAutoUpdater(): void {
+  // 仅在生产环境中启用自动更新
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[AutoUpdater] 开发模式，跳过自动更新');
+    return;
+  }
+
+  // 配置 autoUpdater
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowPrerelease = false;
+
+  // 禁止自动提示（由渲染进程控制）
+  autoUpdater.autoShowDialog = false;
+
+  // ---------- 更新事件监听 ----------
+
+  /** 检查更新中 */
+  autoUpdater.on('checking-for-update', () => {
+    sendToRenderer('updater:checking', {});
+    console.log('[AutoUpdater] 正在检查更新...');
+  });
+
+  /** 发现新版本 */
+  autoUpdater.on('update-available', (info) => {
+    sendToRenderer('updater:available', {
+      version: info.version,
+      releaseDate: info.releaseDate,
+      releaseNotes: info.releaseNotes,
+    });
+    console.log(`[AutoUpdater] 发现新版本: ${info.version}`);
+  });
+
+  /** 当前已是最新版本 */
+  autoUpdater.on('update-not-available', (info) => {
+    sendToRenderer('updater:not-available', {
+      version: info.version,
+    });
+    console.log(`[AutoUpdater] 当前已是最新版本: ${info.version}`);
+  });
+
+  /** 下载进度 */
+  autoUpdater.on('download-progress', (progress) => {
+    sendToRenderer('updater:download-progress', {
+      percent: Math.round(progress.percent),
+      transferred: progress.transferred,
+      total: progress.total,
+      speed: progress.bytesPerSecond,
+    });
+  });
+
+  /** 下载完成 */
+  autoUpdater.on('update-downloaded', (info) => {
+    sendToRenderer('updater:downloaded', {
+      version: info.version,
+      releaseDate: info.releaseDate,
+      releaseNotes: info.releaseNotes,
+    });
+    console.log(`[AutoUpdater] 更新已下载: ${info.version}`);
+  });
+
+  /** 更新错误 */
+  autoUpdater.on('error', (error) => {
+    sendToRenderer('updater:error', {
+      message: error.message,
+    });
+    console.error('[AutoUpdater] 错误:', error.message);
+  });
+
+  // ---------- IPC 处理程序 ----------
+
+  /** 渲染进程请求检查更新 */
+  ipcMain.handle('updater:check-for-updates', async () => {
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      return { success: true, data: result };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  /** 渲染进程请求退出并安装更新 */
+  ipcMain.handle('updater:quit-and-install', () => {
+    autoUpdater.quitAndInstall();
+  });
+}
+
+/**
+ * 向渲染进程发送消息
+ */
+function sendToRenderer(channel: string, data: any): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, data);
+  }
+}
+
+/**
+ * 启动定时检查更新（每小时一次）
+ */
+function startPeriodicUpdateCheck(): void {
+  // 清除之前的定时器
+  if (updateCheckTimer) {
+    clearInterval(updateCheckTimer);
+  }
+
+  // 每小时检查一次更新
+  updateCheckTimer = setInterval(() => {
+    console.log('[AutoUpdater] 定时检查更新...');
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.error('[AutoUpdater] 定时检查更新失败:', err.message);
+    });
+  }, 60 * 60 * 1000); // 1 小时
+}
+
+/**
+ * 停止定时检查更新
+ */
+function stopPeriodicUpdateCheck(): void {
+  if (updateCheckTimer) {
+    clearInterval(updateCheckTimer);
+    updateCheckTimer = null;
+  }
+}
 
 // ==================== 窗口创建 ====================
 
@@ -228,6 +365,19 @@ app.whenReady().then(() => {
   createWindow();
   setupIPC();
 
+  // 初始化自动更新
+  setupAutoUpdater();
+
+  // 启动时检查更新（延迟 3 秒，避免影响启动速度）
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.error('[AutoUpdater] 启动检查更新失败:', err.message);
+    });
+  }, 3000);
+
+  // 启动定时检查更新
+  startPeriodicUpdateCheck();
+
   // macOS 激活窗口
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -254,6 +404,9 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   // 注销设备 IPC 处理器，释放资源
   unregisterDeviceHandlers();
+
+  // 停止定时更新检查
+  stopPeriodicUpdateCheck();
 
   // macOS 上保持应用运行
   if (process.platform !== 'darwin') {

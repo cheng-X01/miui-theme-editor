@@ -23,6 +23,12 @@ export default defineConfig({
       input: {
         index: path.resolve(__dirname, 'index.html'),
       },
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-antd': ['antd', '@ant-design/icons'],
+        },
+      },
     },
   },
 

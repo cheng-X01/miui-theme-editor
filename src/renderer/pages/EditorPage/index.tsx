@@ -45,8 +45,14 @@ import {
   CodeOutlined,
   AppstoreOutlined,
   PhoneOutlined,
+  UndoOutlined,
+  RedoOutlined,
 } from '@ant-design/icons';
 import type { ThemeProject } from '../../../shared/types';
+
+// Store
+import { useProjectStore } from '../../stores/project-store';
+import { useHistoryStore } from '../../stores/history-store';
 
 // AI 组件
 import { AIChatPanel } from '../../ai/components/AIChatPanel';
@@ -103,6 +109,34 @@ const EditorPage: React.FC<EditorPageProps> = ({ project, onBack }) => {
 
   // AI Chat Panel 引用，用于通过快捷按钮发送消息
   const aiPanelRef = useRef<{ sendMessage?: (text: string) => void }>({});
+
+  // Store 引用
+  const projectStore = useProjectStore();
+  const historyStore = useHistoryStore();
+
+  // ==================== 撤销/重做操作 ====================
+
+  /** 处理撤销 */
+  const handleUndo = useCallback(() => {
+    if (!historyStore.canUndo()) {
+      message.info('没有可撤销的操作');
+      return;
+    }
+    const action = historyStore.getUndoDescription();
+    projectStore.undo();
+    message.success(`撤销: ${action}`);
+  }, [historyStore, projectStore]);
+
+  /** 处理重做 */
+  const handleRedo = useCallback(() => {
+    if (!historyStore.canRedo()) {
+      message.info('没有可重做的操作');
+      return;
+    }
+    const action = historyStore.getRedoDescription();
+    projectStore.redo();
+    message.success(`重做: ${action}`);
+  }, [historyStore, projectStore]);
 
   // ==================== 计算属性 ====================
 
@@ -772,6 +806,30 @@ const EditorPage: React.FC<EditorPageProps> = ({ project, onBack }) => {
             background: 'transparent',
           }}
         />
+
+        <Divider type="vertical" style={{ borderColor: styles.borderColor, height: '24px', margin: '0 4px' }} />
+
+        {/* 撤销 */}
+        <Tooltip title="撤销 (Ctrl+Z)">
+          <Button
+            type="text"
+            icon={<UndoOutlined />}
+            onClick={handleUndo}
+            disabled={!historyStore.canUndo()}
+            style={{ color: historyStore.canUndo() ? styles.textSecondary : styles.textMuted }}
+          />
+        </Tooltip>
+
+        {/* 重做 */}
+        <Tooltip title="重做 (Ctrl+Shift+Z)">
+          <Button
+            type="text"
+            icon={<RedoOutlined />}
+            onClick={handleRedo}
+            disabled={!historyStore.canRedo()}
+            style={{ color: historyStore.canRedo() ? styles.textSecondary : styles.textMuted }}
+          />
+        </Tooltip>
 
         <Divider type="vertical" style={{ borderColor: styles.borderColor, height: '24px', margin: '0 4px' }} />
 

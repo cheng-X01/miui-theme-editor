@@ -94,6 +94,85 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns 流式响应
    */
   aiStreamText: (request: any) => ipcRenderer.invoke(IPC_CHANNELS.AI_STREAM_TEXT, request),
+
+  // ==================== 自动更新 API ====================
+
+  /**
+   * 检查更新
+   * @returns 检查结果
+   */
+  checkForUpdates: () => ipcRenderer.invoke('updater:check-for-updates'),
+
+  /**
+   * 退出并安装更新
+   */
+  quitAndInstall: () => ipcRenderer.invoke('updater:quit-and-install'),
+
+  /**
+   * 监听更新可用事件
+   * @param callback 回调函数
+   * @returns 取消监听函数
+   */
+  onUpdateAvailable: (callback: (info: any) => void) => {
+    const handler = (_event: any, info: any) => callback(info);
+    ipcRenderer.on('updater:available', handler);
+    return () => ipcRenderer.removeListener('updater:available', handler);
+  },
+
+  /**
+   * 监听下载进度事件
+   * @param callback 回调函数
+   * @returns 取消监听函数
+   */
+  onDownloadProgress: (callback: (progress: any) => void) => {
+    const handler = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('updater:download-progress', handler);
+    return () => ipcRenderer.removeListener('updater:download-progress', handler);
+  },
+
+  /**
+   * 监听更新已下载事件
+   * @param callback 回调函数
+   * @returns 取消监听函数
+   */
+  onUpdateDownloaded: (callback: (info: any) => void) => {
+    const handler = (_event: any, info: any) => callback(info);
+    ipcRenderer.on('updater:downloaded', handler);
+    return () => ipcRenderer.removeListener('updater:downloaded', handler);
+  },
+
+  /**
+   * 监听检查更新中事件
+   * @param callback 回调函数
+   * @returns 取消监听函数
+   */
+  onCheckingForUpdate: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('updater:checking', handler);
+    return () => ipcRenderer.removeListener('updater:checking', handler);
+  },
+
+  /**
+   * 监听当前已是最新版本事件
+   * @param callback 回调函数
+   * @returns 取消监听函数
+   */
+  onUpdateNotAvailable: (callback: (info: any) => void) => {
+    const handler = (_event: any, info: any) => callback(info);
+    ipcRenderer.on('updater:not-available', handler);
+    return () => ipcRenderer.removeListener('updater:not-available', handler);
+  },
+
+  /**
+   * 监听更新错误事件
+   * @param callback 回调函数
+   * @returns 取消监听函数
+   */
+  onUpdateError: (callback: (error: any) => void) => {
+    const handler = (_event: any, error: any) => callback(error);
+    ipcRenderer.on('updater:error', handler);
+    return () => ipcRenderer.removeListener('updater:error', handler);
+  },
 });
 
 /**
@@ -114,6 +193,16 @@ declare global {
       applyTheme: (deviceSerial: string, packageName: string) => Promise<any>;
       aiGenerateText: (request: any) => Promise<any>;
       aiStreamText: (request: any) => Promise<any>;
+
+      // 自动更新 API
+      checkForUpdates: () => Promise<any>;
+      quitAndInstall: () => Promise<void>;
+      onUpdateAvailable: (callback: (info: any) => void) => () => void;
+      onDownloadProgress: (callback: (progress: any) => void) => () => void;
+      onUpdateDownloaded: (callback: (info: any) => void) => () => void;
+      onCheckingForUpdate: (callback: () => void) => () => void;
+      onUpdateNotAvailable: (callback: (info: any) => void) => () => void;
+      onUpdateError: (callback: (error: any) => void) => () => void;
     };
   }
 }

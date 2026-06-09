@@ -6,12 +6,17 @@
  * - 全局键盘快捷键（撤销/重做/保存/导出等）
  * - 未保存修改提示（关闭窗口时）
  * - 全局保存/导出操作
+ * - 主题/外观切换（深色/浅色）
+ * - 设置抽屉（齿轮图标入口）
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { ConfigProvider, theme as antdTheme, Modal, message } from 'antd';
+import { ConfigProvider, theme as antdTheme, Modal, message, Drawer, Button, Tooltip } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
 import WelcomePage from './pages/WelcomePage';
 import EditorPage from './pages/EditorPage';
+import SettingsPage, { loadSettings, saveSettings, type AppSettings } from './pages/SettingsPage';
+import ShortcutHelpPanel from './components/ShortcutHelpPanel';
 import type { ThemeProject } from '../shared/types';
 
 // 全局状态管理
@@ -29,15 +34,25 @@ import { debounce } from './utils/performance';
 
 /**
  * 主应用组件
- * - 使用 ConfigProvider 配置 Ant Design 暗色主题
+ * - 使用 ConfigProvider 配置 Ant Design 主题（支持深色/浅色切换）
  * - 管理当前打开的主题项目状态
  * - 根据是否有打开的项目切换欢迎页/编辑器页
  * - 集成全局键盘快捷键
  * - 未保存时关闭窗口提示
+ * - 右上角设置按钮，打开设置抽屉
  */
 const App: React.FC = () => {
   /** 当前打开的主题项目 */
   const [currentProject, setCurrentProject] = useState<ThemeProject | null>(null);
+
+  /** 应用设置 */
+  const [appSettings, setAppSettings] = useState<AppSettings>(loadSettings);
+
+  /** 是否显示设置抽屉 */
+  const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
+
+  /** 是否显示快捷键帮助面板 */
+  const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
 
   // ==================== Store 状态 ====================
 
@@ -52,6 +67,93 @@ const App: React.FC = () => {
 
   /** 关闭后的回调（用于确认关闭后执行） */
   const closeCallbackRef = useState<(() => void) | null>(null);
+
+  // ==================== 主题配置 ====================
+
+  /**
+   * 根据 settings 中的 theme 值选择主题算法
+   */
+  const themeAlgorithm = useMemo(() => {
+    return appSettings.theme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm;
+  }, [appSettings.theme]);
+
+  /**
+   * 主题 token 配置
+   */
+  const themeToken = useMemo(() => {
+    if (appSettings.theme === 'dark') {
+      return {
+        colorPrimary: '#ff6b6b',
+        colorBgBase: '#1a1a2e',
+        colorBgContainer: '#16213e',
+        colorBgElevated: '#1a1a2e',
+        colorBorder: '#2a2a4a',
+        colorText: '#e0e0e0',
+        colorTextSecondary: '#a0a0b0',
+        borderRadius: 8,
+        fontSize: 14,
+      };
+    } else {
+      return {
+        colorPrimary: '#ff6b6b',
+        colorBgBase: '#f5f5f5',
+        colorBgContainer: '#ffffff',
+        colorBgElevated: '#ffffff',
+        colorBorder: '#d9d9d9',
+        colorText: '#333333',
+        colorTextSecondary: '#666666',
+        borderRadius: 8,
+        fontSize: 14,
+      };
+    }
+  }, [appSettings.theme]);
+
+  /**
+   * 组件级主题配置
+   */
+  const themeComponents = useMemo(() => {
+    if (appSettings.theme === 'dark') {
+      return {
+        Layout: {
+          siderBg: '#0f0f23',
+          headerBg: '#0f0f23',
+          bodyBg: '#1a1a2e',
+        },
+        Menu: {
+          darkItemBg: '#0f0f23',
+          darkSubMenuItemBg: '#0f0f23',
+        },
+        Card: {
+          colorBgContainer: '#16213e',
+        },
+      };
+    } else {
+      return {
+        Layout: {
+          siderBg: '#ffffff',
+          headerBg: '#ffffff',
+          bodyBg: '#f5f5f5',
+        },
+        Menu: {
+          darkItemBg: '#ffffff',
+          darkSubMenuItemBg: '#ffffff',
+        },
+        Card: {
+          colorBgContainer: '#ffffff',
+        },
+      };
+    }
+  }, [appSettings.theme]);
+
+  // ==================== 设置变更处理 ====================
+
+  /**
+   * 处理设置变更
+   */
+  const handleSettingsChange = useCallback((newSettings: AppSettings) => {
+    setAppSettings(newSettings);
+    saveSettings(newSettings);
+  }, []);
 
   // ==================== 保存/导出操作 ====================
 
@@ -225,12 +327,32 @@ const App: React.FC = () => {
       onCancel: () => {
         // Escape 关闭弹窗或取消操作
         setShowCloseConfirm(false);
+        setSettingsDrawerOpen(false);
       },
     });
   }, [currentProject, handleUndo, handleRedo, handleSave, handleExport]);
 
   // 注册全局快捷键
   useKeyboardShortcuts(shortcuts);
+
+  // ==================== Ctrl+K 快捷键帮助 ====================
+
+  /**
+   * 注册 Ctrl+K 全局快捷键，打开快捷键帮助面板
+   */
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        event.stopPropagation();
+        setShortcutHelpOpen((prev) => !prev);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, []);
 
   // ==================== 窗口关闭拦截 ====================
 
@@ -258,36 +380,32 @@ const App: React.FC = () => {
   return (
     <ConfigProvider
       theme={{
-        algorithm: antdTheme.darkAlgorithm,
-        token: {
-          // 主色调：珊瑚红
-          colorPrimary: '#ff6b6b',
-          // 背景色：深蓝紫
-          colorBgBase: '#1a1a2e',
-          colorBgContainer: '#16213e',
-          colorBgElevated: '#1a1a2e',
-          colorBorder: '#2a2a4a',
-          colorText: '#e0e0e0',
-          colorTextSecondary: '#a0a0b0',
-          borderRadius: 8,
-          fontSize: 14,
-        },
-        components: {
-          Layout: {
-            siderBg: '#0f0f23',
-            headerBg: '#0f0f23',
-            bodyBg: '#1a1a2e',
-          },
-          Menu: {
-            darkItemBg: '#0f0f23',
-            darkSubMenuItemBg: '#0f0f23',
-          },
-          Card: {
-            colorBgContainer: '#16213e',
-          },
-        },
+        algorithm: themeAlgorithm,
+        token: themeToken,
+        components: themeComponents,
       }}
     >
+      {/* ========== 设置按钮（右上角齿轮图标） ========== */}
+      <div
+        style={{
+          position: 'fixed',
+          top: '12px',
+          right: '12px',
+          zIndex: 1000,
+        }}
+      >
+        <Tooltip title="设置">
+          <Button
+            type="text"
+            icon={<SettingOutlined style={{ fontSize: '18px' }} />}
+            onClick={() => setSettingsDrawerOpen(true)}
+            style={{
+              color: appSettings.theme === 'dark' ? '#a0a0b0' : '#666666',
+            }}
+          />
+        </Tooltip>
+      </div>
+
       {currentProject ? (
         <EditorPage
           project={currentProject}
@@ -296,6 +414,29 @@ const App: React.FC = () => {
       ) : (
         <WelcomePage onOpenProject={handleOpenProject} />
       )}
+
+      {/* ========== 设置抽屉 ========== */}
+      <Drawer
+        title="设置"
+        placement="right"
+        width={480}
+        open={settingsDrawerOpen}
+        onClose={() => setSettingsDrawerOpen(false)}
+        styles={{
+          body: {
+            padding: 0,
+            background: appSettings.theme === 'dark' ? '#1a1a2e' : '#f5f5f5',
+          },
+        }}
+      >
+        <SettingsPage onSettingsChange={handleSettingsChange} />
+      </Drawer>
+
+      {/* ========== 快捷键帮助面板 ========== */}
+      <ShortcutHelpPanel
+        visible={shortcutHelpOpen}
+        onClose={() => setShortcutHelpOpen(false)}
+      />
 
       {/* ========== 未保存修改确认弹窗 ========== */}
       <Modal
