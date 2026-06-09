@@ -8,13 +8,22 @@
  */
 
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
-import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
 import * as fs from 'fs';
 import { IPC_CHANNELS } from '../shared/types';
 import { MTZParser } from './engine/mtz-parser';
 import { MTZPacker } from './engine/mtz-packer';
 import { registerDeviceHandlers, unregisterDeviceHandlers } from './ipc/device-handler';
+
+// 动态导入 electron-updater（避免开发环境类型错误）
+let autoUpdater: any = null;
+
+try {
+  const updater = require('electron-updater');
+  autoUpdater = updater.autoUpdater;
+} catch (e) {
+  console.log('[AutoUpdater] electron-updater not available');
+}
 
 // Linux arm64 兼容性修复：禁用 GPU sandbox 和启用软件渲染（如果启动失败）
 // 必须在 app ready 之前设置
@@ -52,6 +61,11 @@ let updateCheckTimer: NodeJS.Timeout | null = null;
  * 配置 electron-updater
  */
 function setupAutoUpdater(): void {
+  if (!autoUpdater) {
+    console.log('[AutoUpdater] autoUpdater not available');
+    return;
+  }
+
   // 仅在生产环境中启用自动更新
   if (process.env.NODE_ENV === 'development') {
     console.log('[AutoUpdater] 开发模式，跳过自动更新');
@@ -64,7 +78,8 @@ function setupAutoUpdater(): void {
   autoUpdater.allowPrerelease = false;
 
   // 禁止自动提示（由渲染进程控制）
-  autoUpdater.autoShowDialog = false;
+  // Note: autoShowDialog 在某些版本中不存在，使用类型断言
+  (autoUpdater as any).autoShowDialog = false;
 
   // ---------- 更新事件监听 ----------
 
@@ -75,7 +90,7 @@ function setupAutoUpdater(): void {
   });
 
   /** 发现新版本 */
-  autoUpdater.on('update-available', (info) => {
+  autoUpdater.on('update-available', (info: any) => {
     sendToRenderer('updater:available', {
       version: info.version,
       releaseDate: info.releaseDate,
@@ -85,7 +100,7 @@ function setupAutoUpdater(): void {
   });
 
   /** 当前已是最新版本 */
-  autoUpdater.on('update-not-available', (info) => {
+  autoUpdater.on('update-not-available', (info: any) => {
     sendToRenderer('updater:not-available', {
       version: info.version,
     });
@@ -93,7 +108,7 @@ function setupAutoUpdater(): void {
   });
 
   /** 下载进度 */
-  autoUpdater.on('download-progress', (progress) => {
+  autoUpdater.on('download-progress', (progress: any) => {
     sendToRenderer('updater:download-progress', {
       percent: Math.round(progress.percent),
       transferred: progress.transferred,
@@ -103,7 +118,7 @@ function setupAutoUpdater(): void {
   });
 
   /** 下载完成 */
-  autoUpdater.on('update-downloaded', (info) => {
+  autoUpdater.on('update-downloaded', (info: any) => {
     sendToRenderer('updater:downloaded', {
       version: info.version,
       releaseDate: info.releaseDate,
@@ -113,7 +128,7 @@ function setupAutoUpdater(): void {
   });
 
   /** 更新错误 */
-  autoUpdater.on('error', (error) => {
+  autoUpdater.on('error', (error: any) => {
     sendToRenderer('updater:error', {
       message: error.message,
     });
@@ -151,6 +166,8 @@ function sendToRenderer(channel: string, data: any): void {
  * 启动定时检查更新（每小时一次）
  */
 function startPeriodicUpdateCheck(): void {
+  if (!autoUpdater) return;
+
   // 清除之前的定时器
   if (updateCheckTimer) {
     clearInterval(updateCheckTimer);
@@ -159,7 +176,7 @@ function startPeriodicUpdateCheck(): void {
   // 每小时检查一次更新
   updateCheckTimer = setInterval(() => {
     console.log('[AutoUpdater] 定时检查更新...');
-    autoUpdater.checkForUpdates().catch((err) => {
+    autoUpdater.checkForUpdates().catch((err: any) => {
       console.error('[AutoUpdater] 定时检查更新失败:', err.message);
     });
   }, 60 * 60 * 1000); // 1 小时
@@ -344,7 +361,6 @@ function setupIPC(): void {
 
 // ==================== 应用生命周期 ====================
 
-// 应用准备就绪
 // 捕获未处理的错误，防止应用静默崩溃
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
@@ -369,14 +385,16 @@ app.whenReady().then(() => {
   setupAutoUpdater();
 
   // 启动时检查更新（延迟 3 秒，避免影响启动速度）
-  setTimeout(() => {
-    autoUpdater.checkForUpdates().catch((err) => {
-      console.error('[AutoUpdater] 启动检查更新失败:', err.message);
-    });
-  }, 3000);
+  if (autoUpdater) {
+    setTimeout(() => {
+      autoUpdater.checkForUpdates().catch((err: any) => {
+        console.error('[AutoUpdater] 启动检查更新失败:', err.message);
+      });
+    }, 3000);
 
-  // 启动定时检查更新
-  startPeriodicUpdateCheck();
+    // 启动定时检查更新
+    startPeriodicUpdateCheck();
+  }
 
   // macOS 激活窗口
   app.on('activate', () => {
