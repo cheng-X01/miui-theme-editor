@@ -1,0 +1,164 @@
+# GitHub Actions CI/CD 工作流 - 自动构建并发布 Electron 应用
+# 触发条件：推送以 v 开头的标签时触发（如 v0.1.0）
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (e.g. v0.2.1)'
+        required: false
+        default: ''
+
+jobs:
+  # 构建任务 - 只编译 Linux arm64
+  build:
+    name: Build Linux arm64
+    runs-on: ubuntu-latest
+
+    steps:
+      # 步骤 1：检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 步骤 2：设置 Node.js 环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      # 步骤 3：安装依赖
+      - name: Install dependencies
+        run: npm ci
+
+      # 步骤 4：构建渲染进程和主进程
+      - name: Build renderer and main
+        run: |
+          npm run build:renderer
+          npm run build:main
+
+      # 步骤 5：构建 Linux arm64 Electron 应用
+      - name: Build Linux arm64
+        run: npx electron-builder --linux --arm64
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 步骤 6：列出产物文件
+      - name: List build artifacts
+        run: |
+          echo "构建产物列表："
+          ls -la release/
+
+      # 步骤 7：上传构建产物
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-linux-arm64
+          path: |
+            release/*arm64.AppImage
+            release/*arm64.deb
+          if-no-files-found: error
+
+  # 发布任务 - 创建 GitHub Release 并同步到 Gitee
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      # 步骤 1：检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 步骤 2：下载构建产物
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-linux-arm64
+          path: artifacts
+
+      # 步骤 3：列出产物文件
+      - name: List artifacts
+        run: |
+          echo "构建产物列表："
+          find artifacts -type f | sort
+
+      # 步骤 4：创建 GitHub Release
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 步骤 5：同步 arm64 deb 到 Gitee Release（国内下载加速）
+      - name: Sync arm64 deb to Gitee Release
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        continue-on-error: true
+        run: |
+          set +e
+
+          TAG="${GITHUB_REF#refs/tags/}"
+          REPO="cheng1992/miui-theme-editor-releases"
+          GITEE_API="https://gitee.com/api/v5"
+
+          echo "=== 开始同步到 Gitee Release ==="
+          echo "Tag: ${TAG}"
+          echo "Repo: ${REPO}"
+
+          # 0. 先在 Gitee 仓库创建 tag（如果不存在）
+          TAG_RESP=$(curl -s -X POST "${GITEE_API}/repos/${REPO}/tags" \
+            -H "Content-Type: application/json" \
+            -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"${TAG}\",\"message\":\"auto sync from GitHub\"}")
+          echo "Create tag response: $(echo "$TAG_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('message','ok'))" 2>/dev/null || echo "$TAG_RESP")"
+
+          # 1. 创建或获取 Gitee Release
+          RELEASE_RESP=$(curl -s -X POST "${GITEE_API}/repos/${REPO}/releases" \
+            -H "Content-Type: application/json" \
+            -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"${TAG}\",\"name\":\"MIUI Theme Editor ${TAG}\",\"body\":\"自动同步自 GitHub Releases - Linux arm64 deb 安装包\",\"prerelease\":false}")
+          echo "Create release response: $(echo "$RELEASE_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('message','ok') or 'id='+str(d.get('id',''))) " 2>/dev/null || echo "$RELEASE_RESP")"
+
+          RELEASE_ID=$(echo "$RELEASE_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
+
+          if [ -z "$RELEASE_ID" ]; then
+            echo "Release 创建失败或已存在，尝试获取..."
+            RELEASE_RESP=$(curl -s "${GITEE_API}/repos/${REPO}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}")
+            RELEASE_ID=$(echo "$RELEASE_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
+          fi
+
+          if [ -z "$RELEASE_ID" ]; then
+            echo "WARNING: Failed to create or get Gitee Release, skipping upload"
+            exit 0
+          fi
+
+          echo "Gitee Release ID: $RELEASE_ID"
+
+          # 2. 只上传 arm64 deb 到 Gitee Release
+          for file in artifacts/*arm64.deb; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              echo "Uploading $filename ..."
+              UPLOAD_RESP=$(curl -s -w "\n%{http_code}" -X POST "${GITEE_API}/repos/${REPO}/releases/${RELEASE_ID}/attach_files" \
+                -F "access_token=${GITEE_TOKEN}" \
+                -F "file=@${file}")
+              HTTP_CODE=$(echo "$UPLOAD_RESP" | tail -1)
+              echo "Upload response HTTP code: ${HTTP_CODE}"
+              if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "201" ]; then
+                echo "WARNING: Upload failed with HTTP ${HTTP_CODE}"
+              else
+                echo "Upload success: $filename"
+              fi
+            fi
+          done
+
+          echo "=== Gitee Release sync completed: https://gitee.com/${REPO}/releases/${TAG} ==="
