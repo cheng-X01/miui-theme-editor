@@ -102,7 +102,6 @@ jobs:
 
       # 步骤 5：同步 arm64 deb 到 Gitee Release（国内下载加速）
       - name: Sync arm64 deb to Gitee Release
-        if: ${{ secrets.GITEE_TOKEN != '' }}
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         continue-on-error: true
