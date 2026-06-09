@@ -11,6 +11,22 @@ import { MTZParser } from './engine/mtz-parser';
 import { MTZPacker } from './engine/mtz-packer';
 import { registerDeviceHandlers, unregisterDeviceHandlers } from './ipc/device-handler';
 
+// Linux arm64 兼容性修复：禁用 GPU sandbox 和启用软件渲染（如果启动失败）
+// 必须在 app ready 之前设置
+if (process.platform === 'linux') {
+  const arch = process.arch;
+  console.log(`[Linux] Architecture: ${arch}`);
+
+  // 检测是否在容器/受限环境中运行
+  const isContainer = !fs.existsSync('/dev/dri') || process.env.CONTAINER_ID;
+  if (isContainer || arch === 'arm64') {
+    console.log('[Linux] Applying arm64/container compatibility flags');
+    app.commandLine.appendSwitch('--no-sandbox');
+    app.commandLine.appendSwitch('--disable-gpu-sandbox');
+    app.commandLine.appendSwitch('--disable-setuid-sandbox');
+  }
+}
+
 // ==================== 全局变量 ====================
 
 /** 主窗口实例 */

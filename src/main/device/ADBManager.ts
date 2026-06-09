@@ -92,9 +92,11 @@ class ADBManager {
 
   /**
    * 私有构造函数，防止外部实例化
+   * 延迟初始化 adbkit 客户端，避免启动时崩溃
    */
   private constructor() {
-    this.initClient()
+    // 延迟初始化，避免在应用启动时因 adbkit 问题导致崩溃
+    // 特别是 Linux arm64 等架构上可能有兼容性问题
   }
 
   // ---------- 客户端初始化 ----------
