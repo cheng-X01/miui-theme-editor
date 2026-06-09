@@ -1,0 +1,8 @@
+{
+  "name": "quick-actions",
+  "version": "1.0.0",
+  "author": "MIUI Theme Editor Team",
+  "entry": "index.js",
+  "permissions": ["ui:toolbar", "notification"],
+  "description": "注册几个工具栏快捷按钮（全选图标、重置颜色、清空壁纸等），按钮点击时通过 notify 发送通知"
+}

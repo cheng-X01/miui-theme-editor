@@ -1,0 +1,8 @@
+{
+  "name": "icon-stats",
+  "version": "1.0.0",
+  "author": "MIUI Theme Editor Team",
+  "entry": "index.js",
+  "permissions": ["read:project", "ui:panel"],
+  "description": "读取当前项目的图标列表，统计图标数量、按密度桶分组统计、计算已替换/未替换比例"
+}

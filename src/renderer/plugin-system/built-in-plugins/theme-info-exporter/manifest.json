@@ -1,0 +1,8 @@
+{
+  "name": "theme-info-exporter",
+  "version": "1.0.0",
+  "author": "MIUI Theme Editor Team",
+  "entry": "index.js",
+  "permissions": ["read:project"],
+  "description": "读取当前项目信息，生成 JSON 格式的主题摘要（名称、版本、作者、资源统计等）"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "wallpaper-checker",
+  "version": "1.0.0",
+  "author": "MIUI Theme Editor Team",
+  "entry": "index.js",
+  "permissions": ["read:project"],
+  "description": "检查壁纸尺寸是否符合 MIUI 规范（推荐 1080x1920 或更高），输出检查结果"
+}

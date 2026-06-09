@@ -1,0 +1,8 @@
+{
+  "name": "color-harmony",
+  "version": "1.0.0",
+  "author": "MIUI Theme Editor Team",
+  "entry": "index.js",
+  "permissions": ["read:project", "ui:panel"],
+  "description": "读取当前项目的颜色配置，生成互补色、类似色、三色组、四色组等和谐配色方案"
+}
