@@ -1,0 +1,12 @@
+{
+  "name": "theme-poster",
+  "version": "1.0.0",
+  "author": "MIUI Theme Editor Team",
+  "description": "主题配套海报制作器 - 自动生成主题宣传海报",
+  "permissions": [
+    "read:project",
+    "ui:panel"
+  ],
+  "icon": "picture",
+  "category": "design"
+}

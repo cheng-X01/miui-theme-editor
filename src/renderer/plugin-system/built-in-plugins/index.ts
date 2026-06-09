@@ -25,6 +25,9 @@ import themeInfoExporterCode from './built-in-plugins/theme-info-exporter/index.
 import quickActionsManifest from './built-in-plugins/quick-actions/manifest.json';
 import quickActionsCode from './built-in-plugins/quick-actions/index.js?raw';
 
+import themePosterManifest from './built-in-plugins/theme-poster/manifest.json';
+import themePosterCode from './built-in-plugins/theme-poster/index.js?raw';
+
 // ==================== 内置插件定义 ====================
 
 /** 内置插件列表（清单 + 代码 + 目录标识） */
@@ -53,6 +56,11 @@ const builtinPlugins = [
     manifest: quickActionsManifest,
     code: quickActionsCode as string,
     directory: 'built-in-plugins/quick-actions',
+  },
+  {
+    manifest: themePosterManifest,
+    code: themePosterCode as string,
+    directory: 'built-in-plugins/theme-poster',
   },
 ];
 

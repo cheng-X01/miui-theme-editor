@@ -94,8 +94,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 步骤 5：同步到 Gitee Release（国内下载加速）
-      - name: Sync to Gitee Release
+      # 步骤 5：同步 arm64 deb 到 Gitee Release（国内下载加速）
+      - name: Sync arm64 deb to Gitee Release
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
@@ -111,7 +111,7 @@ jobs:
           # 1. 创建或获取 Gitee Release
           RELEASE_RESP=$(curl -s -X POST "${GITEE_API}/repos/${REPO}/releases" \
             -H "Content-Type: application/json" \
-            -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"${TAG}\",\"name\":\"MIUI Theme Editor ${TAG}\",\"body\":\"自动同步自 GitHub Releases\",\"prerelease\":false}")
+            -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"${TAG}\",\"name\":\"MIUI Theme Editor ${TAG}\",\"body\":\"自动同步自 GitHub Releases - Linux arm64 deb 安装包\",\"prerelease\":false}")
           RELEASE_ID=$(echo "$RELEASE_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
 
           if [ -z "$RELEASE_ID" ]; then
@@ -127,8 +127,8 @@ jobs:
 
           echo "Gitee Release ID: $RELEASE_ID"
 
-          # 2. 上传所有产物到 Gitee Release
-          for file in artifacts/*; do
+          # 2. 只上传 arm64 deb 到 Gitee Release
+          for file in artifacts/*arm64.deb; do
             if [ -f "$file" ]; then
               filename=$(basename "$file")
               echo "Uploading $filename ..."

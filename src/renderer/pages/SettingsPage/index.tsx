@@ -31,7 +31,7 @@ import {
 import {
   GlobalOutlined,
   BulbOutlined,
-  KeyboardOutlined,
+  KeyOutlined,
   FolderOutlined,
   SaveOutlined,
   QuestionCircleOutlined,
@@ -407,7 +407,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onSettingsChange }) => {
       <Card
         title={
           <Space>
-            <KeyboardOutlined style={{ color: '#ff6b6b' }} />
+            <KeyOutlined style={{ color: '#ff6b6b' }} />
             <Text style={{ color: styles.textPrimary }}>{t('settings.shortcutList')}</Text>
           </Space>
         }
