@@ -113,58 +113,43 @@ jobs:
 
           echo "=== 开始同步到 Gitee Release ==="
           echo "Tag: ${TAG}"
-          echo "Repo: ${REPO}"
 
-          # 检查 deb 文件位置
-          echo "=== 查找 deb 文件 ==="
-          find artifacts -name "*arm64.deb" -type f
+          # 检查 deb 文件
           DEB_FILE=$(find artifacts -name "*arm64.deb" -type f | head -1)
           if [ -z "$DEB_FILE" ]; then
-            echo "ERROR: No arm64 deb file found in artifacts/"
-            ls -la artifacts/
+            echo "ERROR: No arm64 deb file found"
             exit 1
           fi
           echo "Found deb file: $DEB_FILE"
 
-          # 1. 先尝试获取已有的 Gitee Release
+          # 获取或创建 Gitee Release
           echo "=== 获取 Gitee Release ==="
           RELEASE_RESP=$(curl -s "${GITEE_API}/repos/${REPO}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}")
           RELEASE_ID=$(echo "$RELEASE_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
 
-          if [ -n "$RELEASE_ID" ]; then
-            echo "Found existing Gitee Release ID: $RELEASE_ID"
-          else
-            echo "Release 不存在，尝试创建..."
-            # 先删除可能存在的同名 tag（Gitee 不允许用已有 tag 创建 Release）
-            echo "Deleting existing tag if any..."
-            curl -s -X DELETE "${GITEE_API}/repos/${REPO}/git/refs/tags/${TAG}?access_token=${GITEE_TOKEN}" > /dev/null 2>&1
-
-            # 创建新 tag
-            echo "Creating Gitee tag..."
+          if [ -z "$RELEASE_ID" ]; then
+            echo "Release 不存在，需要创建..."
+            # 获取当前 commit SHA
             COMMIT_SHA=$(git rev-parse HEAD)
-            curl -s -X POST "${GITEE_API}/repos/${REPO}/git/tags" \
-              -H "Content-Type: application/json" \
-              -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag\":\"${TAG}\",\"message\":\"auto sync\",\"object\":\"${COMMIT_SHA}\",\"type\":\"commit\"}" > /dev/null 2>&1
-            curl -s -X POST "${GITEE_API}/repos/${REPO}/git/refs" \
-              -H "Content-Type: application/json" \
-              -d "{\"access_token\":\"${GITEE_TOKEN}\",\"ref\":\"refs/tags/${TAG}\",\"sha\":\"${COMMIT_SHA}\"}" > /dev/null 2>&1
+            echo "Commit SHA: ${COMMIT_SHA}"
 
-            # 创建 Release
+            # 创建 Release（Gitee 会自动创建 tag）
             RELEASE_RESP=$(curl -s -X POST "${GITEE_API}/repos/${REPO}/releases" \
               -H "Content-Type: application/json" \
               -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"${TAG}\",\"target_commitish\":\"${COMMIT_SHA}\",\"name\":\"MIUI Theme Editor ${TAG}\",\"body\":\"自动同步自 GitHub Releases - Linux arm64 deb 安装包\",\"prerelease\":false}")
             echo "Create release response: $RELEASE_RESP"
             RELEASE_ID=$(echo "$RELEASE_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
-          fi
 
-          if [ -z "$RELEASE_ID" ]; then
-            echo "ERROR: Failed to create or get Gitee Release"
-            exit 1
+            if [ -z "$RELEASE_ID" ]; then
+              echo "ERROR: Failed to create Gitee Release"
+              echo "Response: $RELEASE_RESP"
+              exit 1
+            fi
           fi
 
           echo "Gitee Release ID: $RELEASE_ID"
 
-          # 2. 上传 arm64 deb 到 Gitee Release
+          # 上传 deb 文件
           echo "=== 上传 deb 文件 ==="
           filename=$(basename "$DEB_FILE")
           echo "Uploading $filename ..."
@@ -172,13 +157,12 @@ jobs:
             -F "access_token=${GITEE_TOKEN}" \
             -F "file=@${DEB_FILE}")
           HTTP_CODE=$(echo "$UPLOAD_RESP" | tail -1)
-          BODY=$(echo "$UPLOAD_RESP" | sed '$d')
-          echo "Upload response HTTP code: ${HTTP_CODE}"
-          echo "Upload response body: ${BODY}"
+          echo "Upload HTTP code: ${HTTP_CODE}"
+
           if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "201" ]; then
             echo "ERROR: Upload failed with HTTP ${HTTP_CODE}"
             exit 1
           fi
           echo "Upload success: $filename"
 
-          echo "=== Gitee Release sync completed: https://gitee.com/${REPO}/releases/${TAG} ==="
+          echo "=== Gitee sync completed ==="
