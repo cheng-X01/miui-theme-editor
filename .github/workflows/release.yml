@@ -126,29 +126,34 @@ jobs:
           fi
           echo "Found deb file: $DEB_FILE"
 
-          # 0. 先在 Gitee 仓库创建 tag（如果不存在）
-          echo "=== 创建 Gitee tag ==="
-          TAG_RESP=$(curl -s -X POST "${GITEE_API}/repos/${REPO}/tags" \
-            -H "Content-Type: application/json" \
-            -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"${TAG}\",\"message\":\"auto sync from GitHub\"}")
-          echo "Create tag response: $(echo "$TAG_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('message','ok'))" 2>/dev/null || echo "$TAG_RESP")"
-
-          # 1. 创建或获取 Gitee Release
-          echo "=== 创建 Gitee Release ==="
-          # Gitee 需要 target_commitish 参数
-          COMMIT_SHA=$(git rev-parse HEAD)
-          echo "Commit SHA: ${COMMIT_SHA}"
-          RELEASE_RESP=$(curl -s -X POST "${GITEE_API}/repos/${REPO}/releases" \
-            -H "Content-Type: application/json" \
-            -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"${TAG}\",\"target_commitish\":\"${COMMIT_SHA}\",\"name\":\"MIUI Theme Editor ${TAG}\",\"body\":\"自动同步自 GitHub Releases - Linux arm64 deb 安装包\",\"prerelease\":false}")
-          echo "Create release raw response: $RELEASE_RESP"
-
+          # 1. 先尝试获取已有的 Gitee Release
+          echo "=== 获取 Gitee Release ==="
+          RELEASE_RESP=$(curl -s "${GITEE_API}/repos/${REPO}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}")
           RELEASE_ID=$(echo "$RELEASE_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
 
-          if [ -z "$RELEASE_ID" ]; then
-            echo "Release 创建失败或已存在，尝试获取..."
-            RELEASE_RESP=$(curl -s "${GITEE_API}/repos/${REPO}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}")
-            echo "Get release response: $RELEASE_RESP"
+          if [ -n "$RELEASE_ID" ]; then
+            echo "Found existing Gitee Release ID: $RELEASE_ID"
+          else
+            echo "Release 不存在，尝试创建..."
+            # 先删除可能存在的同名 tag（Gitee 不允许用已有 tag 创建 Release）
+            echo "Deleting existing tag if any..."
+            curl -s -X DELETE "${GITEE_API}/repos/${REPO}/git/refs/tags/${TAG}?access_token=${GITEE_TOKEN}" > /dev/null 2>&1
+
+            # 创建新 tag
+            echo "Creating Gitee tag..."
+            COMMIT_SHA=$(git rev-parse HEAD)
+            curl -s -X POST "${GITEE_API}/repos/${REPO}/git/tags" \
+              -H "Content-Type: application/json" \
+              -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag\":\"${TAG}\",\"message\":\"auto sync\",\"object\":\"${COMMIT_SHA}\",\"type\":\"commit\"}" > /dev/null 2>&1
+            curl -s -X POST "${GITEE_API}/repos/${REPO}/git/refs" \
+              -H "Content-Type: application/json" \
+              -d "{\"access_token\":\"${GITEE_TOKEN}\",\"ref\":\"refs/tags/${TAG}\",\"sha\":\"${COMMIT_SHA}\"}" > /dev/null 2>&1
+
+            # 创建 Release
+            RELEASE_RESP=$(curl -s -X POST "${GITEE_API}/repos/${REPO}/releases" \
+              -H "Content-Type: application/json" \
+              -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"${TAG}\",\"target_commitish\":\"${COMMIT_SHA}\",\"name\":\"MIUI Theme Editor ${TAG}\",\"body\":\"自动同步自 GitHub Releases - Linux arm64 deb 安装包\",\"prerelease\":false}")
+            echo "Create release response: $RELEASE_RESP"
             RELEASE_ID=$(echo "$RELEASE_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
           fi
 
