@@ -135,9 +135,12 @@ jobs:
 
           # 1. 创建或获取 Gitee Release
           echo "=== 创建 Gitee Release ==="
+          # Gitee 需要 target_commitish 参数
+          COMMIT_SHA=$(git rev-parse HEAD)
+          echo "Commit SHA: ${COMMIT_SHA}"
           RELEASE_RESP=$(curl -s -X POST "${GITEE_API}/repos/${REPO}/releases" \
             -H "Content-Type: application/json" \
-            -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"${TAG}\",\"name\":\"MIUI Theme Editor ${TAG}\",\"body\":\"自动同步自 GitHub Releases - Linux arm64 deb 安装包\",\"prerelease\":false}")
+            -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"${TAG}\",\"target_commitish\":\"${COMMIT_SHA}\",\"name\":\"MIUI Theme Editor ${TAG}\",\"body\":\"自动同步自 GitHub Releases - Linux arm64 deb 安装包\",\"prerelease\":false}")
           echo "Create release raw response: $RELEASE_RESP"
 
           RELEASE_ID=$(echo "$RELEASE_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
