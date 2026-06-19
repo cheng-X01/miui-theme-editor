@@ -25,19 +25,36 @@ try {
   console.log('[AutoUpdater] electron-updater not available');
 }
 
-// Linux arm64 兼容性修复：禁用 GPU sandbox 和启用软件渲染（如果启动失败）
-// 必须在 app ready 之前设置
+// Linux arm64 兼容性修复：禁用 GPU 加速和相关沙箱
+// 必须在 app.ready() 之前设置
+// 参考：Chromium 在 ARM64 Linux 上 GPU 驱动（Mesa/Vulkan）常不兼容，
+//        导致 SIGILL/SIGSEGV 崩溃或渲染进程启动失败
 if (process.platform === 'linux') {
   const arch = process.arch;
   console.log(`[Linux] Architecture: ${arch}`);
 
-  // 检测是否在容器/受限环境中运行
-  const isContainer = !fs.existsSync('/dev/dri') || process.env.CONTAINER_ID;
+  // 检测是否在容器/无 GPU 环境中运行
+  const hasGpu = fs.existsSync('/dev/dri');
+  const isContainer = !hasGpu || !!process.env.CONTAINER_ID;
+
   if (isContainer || arch === 'arm64') {
-    console.log('[Linux] Applying arm64/container compatibility flags');
-    app.commandLine.appendSwitch('--no-sandbox');
-    app.commandLine.appendSwitch('--disable-gpu-sandbox');
-    app.commandLine.appendSwitch('--disable-setuid-sandbox');
+    console.log(`[Linux] Applying ${arch}/container compatibility flags`);
+
+    // ---- GPU 相关 ----
+    app.commandLine.appendSwitch('--disable-gpu');              // 禁用 GPU 硬件加速（最关键）
+    app.commandLine.appendSwitch('--disable-software-rasterizer'); // 禁用软件光栅化回退
+    app.commandLine.appendSwitch('--disable-gpu-compositing');   // 禁用 GPU 合成
+    app.commandLine.appendSwitch('--disable-gpu-rasterization'); // 禁用 GPU 光栅化
+
+    // ---- 沙箱相关 ----
+    app.commandLine.appendSwitch('--no-sandbox');               // 禁用沙箱
+    app.commandLine.appendSwitch('--disable-gpu-sandbox');      // 禁用 GPU 沙箱
+    app.commandLine.appendSwitch('--disable-setuid-sandbox');   // 禁用 setuid 沙箱
+
+    // ---- 渲染稳定性 ----
+    app.commandLine.appendSwitch('--disable-dev-shm-usage');    // 使用 /tmp 而非 /dev/shm
+    app.commandLine.appendSwitch('--disable-features=Vulkan');  // 禁用 Vulkan（ARM64 常缺驱动）
+    app.commandLine.appendSwitch('--use-gl=swiftshader');      // 使用 SwiftShader 软件渲染
   }
 }
 
