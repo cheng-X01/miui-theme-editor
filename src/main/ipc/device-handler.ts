@@ -8,6 +8,29 @@ import { ipcMain, IpcMainInvokeEvent } from 'electron'
 import { IPC_CHANNELS } from '../../shared/types'
 import ADBManager, { DeviceInfo, DeviceMonitorCallback } from '../device/ADBManager'
 
+// ==================== 输入验证 ====================
+
+/**
+ * 验证主题名称安全性（防止 ADB 命令注入）
+ * 仅允许字母、数字、下划线、连字符、中文、点号
+ */
+function validateThemeName(name: string): boolean {
+  return /^[\w\u4e00-\u9fff.\-]+$/.test(name);
+}
+
+/**
+ * 验证主题路径安全性（防止 ADB 命令注入和路径遍历）
+ * 必须以 /sdcard/MIUI/theme/ 开头，且不包含 shell 特殊字符
+ */
+function validateThemePath(themePath: string): boolean {
+  if (!themePath.startsWith('/sdcard/MIUI/theme/')) {
+    return false;
+  }
+  // 检查 shell 特殊字符
+  const dangerousChars = [';', '|', '&', '$', '`', '(', ')', '{', '}', '<', '>', '\n', '\r'];
+  return !dangerousChars.some(c => themePath.includes(c));
+}
+
 // ==================== 全局变量 ====================
 
 /** ADB 管理器单例实例 */
@@ -60,6 +83,10 @@ export function registerDeviceHandlers(): void {
       themeName: string
     ) => {
       try {
+        // 输入验证：防止命令注入
+        if (!validateThemeName(themeName)) {
+          return { success: false, error: '主题名称包含非法字符' };
+        }
         await adbManager.pushTheme(deviceId, mtzBuffer, themeName)
         return { success: true, data: null }
       } catch (error: any) {
@@ -76,6 +103,10 @@ export function registerDeviceHandlers(): void {
     IPC_CHANNELS.APPLY_THEME,
     async (_event: IpcMainInvokeEvent, deviceId: string, themePath: string) => {
       try {
+        // 输入验证：防止命令注入
+        if (!validateThemePath(themePath)) {
+          return { success: false, error: '主题路径不合法' };
+        }
         await adbManager.applyTheme(deviceId, themePath)
         return { success: true, data: null }
       } catch (error: any) {

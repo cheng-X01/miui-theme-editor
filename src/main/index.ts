@@ -25,6 +25,42 @@ try {
   console.log('[AutoUpdater] electron-updater not available');
 }
 
+// ==================== 安全工具函数 ====================
+
+/** 允许访问的目录白名单 */
+const ALLOWED_DIRECTORIES: string[] = [];
+
+/** 添加允许访问的目录（由用户通过文件对话框选择时动态添加） */
+export function addAllowedDirectory(dirPath: string): void {
+  const resolved = path.resolve(dirPath);
+  if (!ALLOWED_DIRECTORIES.includes(resolved)) {
+    ALLOWED_DIRECTORIES.push(resolved);
+  }
+}
+
+/**
+ * 验证文件路径是否在允许的目录范围内
+ * 防止路径遍历攻击
+ */
+function validateFilePath(filePath: string): string | null {
+  try {
+    const resolved = path.resolve(filePath);
+    // 如果白名单为空（开发模式），允许所有路径
+    if (ALLOWED_DIRECTORIES.length === 0 && process.env.NODE_ENV === 'development') {
+      return resolved;
+    }
+    // 检查路径是否在允许的目录内
+    for (const allowedDir of ALLOWED_DIRECTORIES) {
+      if (resolved.startsWith(allowedDir + path.sep) || resolved === allowedDir) {
+        return resolved;
+      }
+    }
+    return null; // 不在允许范围内
+  } catch {
+    return null;
+  }
+}
+
 // Linux arm64 兼容性修复：禁用 GPU 加速和相关沙箱
 // 必须在 app.ready() 之前设置
 // 参考：Chromium 在 ARM64 Linux 上 GPU 驱动（Mesa/Vulkan）常不兼容，
@@ -255,7 +291,13 @@ function createWindow(): void {
 
   // 外部链接在系统浏览器中打开
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    // 安全检查：仅允许 http 和 https 协议
+    const allowed = url.startsWith('http://') || url.startsWith('https://');
+    if (allowed) {
+      shell.openExternal(url);
+    } else {
+      console.warn(`[Security] Blocked external URL: ${url}`);
+    }
     return { action: 'deny' };
   });
 
@@ -274,7 +316,10 @@ function setupIPC(): void {
 
   /** 打开文件对话框 */
   ipcMain.handle(IPC_CHANNELS.OPEN_FILE, async (_event, options) => {
-    const result = await dialog.showOpenDialog(mainWindow!, {
+    if (!mainWindow) {
+      return { canceled: true, filePaths: [] };
+    }
+    const result = await dialog.showOpenDialog(mainWindow, {
       title: options?.title || '打开文件',
       defaultPath: options?.defaultPath,
       filters: options?.filters || [
@@ -291,7 +336,10 @@ function setupIPC(): void {
 
   /** 保存文件对话框 */
   ipcMain.handle(IPC_CHANNELS.SAVE_FILE, async (_event, options) => {
-    const result = await dialog.showSaveDialog(mainWindow!, {
+    if (!mainWindow) {
+      return { canceled: true, filePaths: [] };
+    }
+    const result = await dialog.showSaveDialog(mainWindow, {
       title: options?.title || '保存文件',
       defaultPath: options?.defaultPath,
       filters: options?.filters || [
@@ -309,7 +357,11 @@ function setupIPC(): void {
   /** 读取文件内容 */
   ipcMain.handle(IPC_CHANNELS.READ_FILE, async (_event, filePath: string) => {
     try {
-      const buffer = await fs.promises.readFile(filePath);
+      const safePath = validateFilePath(filePath);
+      if (!safePath) {
+        return { success: false, error: '文件路径不在允许的访问范围内' };
+      }
+      const buffer = await fs.promises.readFile(safePath);
       return { success: true, data: buffer };
     } catch (error: any) {
       return { success: false, error: error.message };
@@ -319,7 +371,11 @@ function setupIPC(): void {
   /** 写入文件内容 */
   ipcMain.handle(IPC_CHANNELS.WRITE_FILE, async (_event, filePath: string, data: Buffer) => {
     try {
-      await fs.promises.writeFile(filePath, data);
+      const safePath = validateFilePath(filePath);
+      if (!safePath) {
+        return { success: false, error: '文件路径不在允许的访问范围内' };
+      }
+      await fs.promises.writeFile(safePath, data);
       return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message };
@@ -387,6 +443,8 @@ process.on('uncaughtException', (error) => {
     const log = `[${new Date().toISOString()}] Uncaught Exception: ${error.stack || error.message}\n`;
     fs.appendFileSync(logPath, log);
   }
+  // 记录日志后退出，避免进程处于不一致状态
+  setTimeout(() => app.exit(1), 1000);
 });
 
 process.on('unhandledRejection', (reason) => {

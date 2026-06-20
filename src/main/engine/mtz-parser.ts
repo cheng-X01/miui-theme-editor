@@ -75,10 +75,35 @@ export class MTZParser {
     // 1. 解压 ZIP 文件
     const zip = await JSZip.loadAsync(buffer);
 
-    // 遍历所有文件，存入 rawFiles
+    // 遍历所有文件，存入 rawFiles（带大小限制防止 ZIP 炸弹）
+    const MAX_TOTAL_SIZE = 500 * 1024 * 1024; // 500MB 总解压大小限制
+    const MAX_FILE_SIZE = options.maxFileSize || 50 * 1024 * 1024; // 单文件 50MB 限制
+    let totalSize = 0;
+
     for (const [relativePath, zipEntry] of Object.entries(zip.files)) {
       if (!zipEntry.dir) {
+        // 检查路径遍历
+        if (relativePath.includes('..') || path.isAbsolute(relativePath)) {
+          warnings.push(`跳过可疑路径: ${relativePath}`);
+          continue;
+        }
+
+        // 检查单个文件大小
+        const uncompressedSize = (zipEntry as any)._data?.uncompressedSize || 0;
+        if (uncompressedSize > MAX_FILE_SIZE) {
+          warnings.push(`文件过大，跳过: ${relativePath} (${(uncompressedSize / 1024 / 1024).toFixed(1)}MB)`);
+          continue;
+        }
+
         const data = await zipEntry.async('nodebuffer');
+        totalSize += data.length;
+
+        // 检查总大小
+        if (totalSize > MAX_TOTAL_SIZE) {
+          warnings.push(`总解压大小超过限制 (${(totalSize / 1024 / 1024).toFixed(1)}MB)，停止解析`);
+          break;
+        }
+
         rawFiles.set(relativePath, data);
       }
     }
@@ -178,8 +203,8 @@ export class MTZParser {
         version: theme.version || theme.ver || defaultDescription.version,
         description: theme.description || theme.desc || defaultDescription.description,
         uiVersion: theme.uiVersion || theme.ui_version || defaultDescription.uiVersion,
-        designWidth: parseInt(theme.designWidth || theme.design_width || String(defaultDescription.designWidth)),
-        designHeight: parseInt(theme.designHeight || theme.design_height || String(defaultDescription.designHeight)),
+        designWidth: parseInt(theme.designWidth || theme.design_width || String(defaultDescription.designWidth)) || defaultDescription.designWidth,
+        designHeight: parseInt(theme.designHeight || theme.design_height || String(defaultDescription.designHeight)) || defaultDescription.designHeight,
         supportsDarkMode: theme.supportsDarkMode === 'true' || theme.darkMode === 'true',
         minMIUIVersion: theme.minMIUIVersion || theme.min_version || defaultDescription.minMIUIVersion,
         category: theme.category,
