@@ -10,7 +10,7 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
-import { IPC_CHANNELS } from '../shared/types';
+import { IPC_CHANNELS } from '../shared/types/index';
 import { MTZParser } from './engine/mtz-parser';
 import { MTZPacker } from './engine/mtz-packer';
 import { registerDeviceHandlers, unregisterDeviceHandlers } from './ipc/device-handler';

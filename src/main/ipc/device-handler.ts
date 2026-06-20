@@ -5,7 +5,7 @@
  */
 
 import { ipcMain, IpcMainInvokeEvent } from 'electron'
-import { IPC_CHANNELS } from '../../shared/types'
+import { IPC_CHANNELS } from '../../shared/types/index'
 import ADBManager, { DeviceInfo, DeviceMonitorCallback } from '../device/ADBManager'
 
 // ==================== 输入验证 ====================

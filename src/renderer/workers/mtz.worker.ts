@@ -24,7 +24,7 @@ import type {
   LockscreenResource,
   StatusbarResource,
   MAMLModule,
-} from '../../shared/types';
+} from '../../shared/types/index';
 
 // ==================== Worker 消息类型 ====================
 

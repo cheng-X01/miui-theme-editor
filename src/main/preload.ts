@@ -4,7 +4,7 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC_CHANNELS } from '../shared/types';
+import { IPC_CHANNELS } from '../shared/types/index';
 
 /**
  * 通过 contextBridge 暴露给渲染进程的 Electron API

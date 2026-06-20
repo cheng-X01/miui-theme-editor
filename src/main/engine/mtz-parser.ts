@@ -21,7 +21,7 @@ import type {
   LockscreenResource,
   StatusbarResource,
   MAMLModule,
-} from '../../shared/types';
+} from '../../shared/types/index';
 
 // ==================== 类型定义 ====================
 
